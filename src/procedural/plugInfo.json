@@ -1,0 +1,27 @@
+{
+    "Plugins": [
+        {
+            "Info": {
+                "Types": {
+                    "GolaemUSDFileFormat": {
+                        "bases": [
+                            "SdfFileFormat"
+                        ],
+                        "displayName": "Golaem USD",
+                        "extensions": [
+                            "glmusd"
+                        ],
+                        "formatId": "glmUsdFormat",
+                        "primary": true,
+                        "target": "usd"
+                    }
+                }
+            },
+            "LibraryPath": "@GOLAEMUSD_LIBRARY_PATH@",
+            "Name": "glmUsdFormat",
+            "ResourcePath": "resources",
+            "Root": ".",
+            "Type": "library"
+        }
+    ]
+}
