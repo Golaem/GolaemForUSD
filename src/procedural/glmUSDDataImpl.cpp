@@ -600,7 +600,7 @@ namespace glm
                 }
             }
 
-            for (size_t iFrame = _startFrame; iFrame <= _endFrame; ++iFrame)
+            for (int iFrame = _startFrame; iFrame <= _endFrame; ++iFrame)
             {
                 _animTimeSampleTimes.insert(double(iFrame));
             }

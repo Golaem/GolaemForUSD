@@ -20,8 +20,6 @@ namespace glm
         static glm::Mutex s_initLock;
         static int s_initCount = 0;
 
-        static USDLogger* _usdLogger;
-
         //-----------------------------------------------------------------------------
         void init()
         {
