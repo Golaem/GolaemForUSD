@@ -19,6 +19,7 @@ namespace glm
 {
     namespace usdplugin
     {
+        using namespace PXR_INTERNAL_NS;
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4003)
@@ -28,10 +29,10 @@ namespace glm
 #pragma warning(pop)
 #endif
 
-        TF_DECLARE_WEAK_AND_REF_PTRS(GolaemUSDFileFormatTokens);
-
         TF_REGISTRY_FUNCTION(TfType)
         {
+            // don't forget to use the full type name (with namespaces, i.e. glm::usdplugin::GolaemUSDFileFormat) in
+            // the plugInfo.json file
             SDF_DEFINE_FILE_FORMAT(glm::usdplugin::GolaemUSDFileFormat, SdfFileFormat);
         }
 

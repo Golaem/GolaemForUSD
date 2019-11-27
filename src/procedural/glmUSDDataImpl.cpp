@@ -254,7 +254,11 @@ namespace glm
                     // of prim child names for each non-leaf prim regardless of depth.
                     if (_primSpecPaths.count(path) && !_entityDataMap.count(path))
                     {
-                        RETURN_TRUE_WITH_OPTIONAL_VALUE(_primChildNames);
+                        auto itChild = _primChildNames.find(path);
+                        if (itChild != _primChildNames.end())
+                        {
+                            RETURN_TRUE_WITH_OPTIONAL_VALUE(itChild->second);
+                        }
                     }
                 }
 
@@ -499,8 +503,6 @@ namespace glm
                 return;
             }
 
-            GLM_CROWD_TRACE_ERROR("Test Message");
-
             glm::crowdio::SimulationCacheLibrary simuCacheLibrary;
             loadSimulationCacheLib(simuCacheLibrary, _params.glmCacheLibFile.data());
 
@@ -532,6 +534,40 @@ namespace glm
                 layoutFiles = cacheInfo->_layoutFile;
                 layoutFiles.trim(";");
             }
+            // override cacheInfo params if neeeded
+            if (!_params.glmCrowdFieldNames.IsEmpty())
+            {
+                cfNames = _params.glmCrowdFieldNames.data();
+            }
+            if (!_params.glmCacheName.IsEmpty())
+            {
+                cacheName = _params.glmCacheName.data();
+            }
+            if (!_params.glmCacheDir.IsEmpty())
+            {
+                cacheDir = _params.glmCacheDir.data();
+            }
+            if (!_params.glmCharacterFiles.IsEmpty())
+            {
+                characterFiles = _params.glmCharacterFiles.data();
+            }
+            if (!_params.glmSourceTerrain.IsEmpty())
+            {
+                srcTerrainFile = _params.glmSourceTerrain.data();
+            }
+            if (!_params.glmDestTerrain.IsEmpty())
+            {
+                dstTerrainFile = _params.glmDestTerrain.data();
+            }
+            enableLayout = enableLayout && _params.glmEnableLayout;
+            if (!_params.glmLayoutFiles.IsEmpty())
+            {
+                layoutFiles = _params.glmLayoutFiles.data();
+            }
+
+            float renderPercent = _params.glmDrawPercent * 0.01f;
+            //GolaemDisplayMode::Value displayMode = (GolaemDisplayMode::Value)_params.glmDisplayMode;
+            //short geoTag = _params.glmGeoTag;
 
             _factory.loadGolaemCharacters(characterFiles.c_str());
 
@@ -565,6 +601,10 @@ namespace glm
             }
             _factory.setTerrainMeshes(sourceTerrain, destTerrain);
 
+            // Layer always has a root spec that is the default prim of the layer.
+            _primSpecPaths.insert(_GetRootPrimPath());
+            std::vector<TfToken>& rootChildNames = _primChildNames[_GetRootPrimPath()];
+
             bool framesFound = false;
             glm::Array<glm::GlmString> crowdFieldNames = glm::stringToStringArray(cfNames.c_str(), ";");
             for (size_t iCf = 0, cfCount = crowdFieldNames.size(); iCf < cfCount; ++iCf)
@@ -574,6 +614,13 @@ namespace glm
                 {
                     continue;
                 }
+
+                SdfPath cfPath = _GetRootPrimPath().AppendChild(TfToken(cfName.c_str()));
+                _primSpecPaths.insert(cfPath);
+                rootChildNames.push_back(TfToken(cfName.c_str()));
+
+                std::vector<TfToken>& cfChildNames = _primChildNames[cfPath];
+
                 glm::crowdio::CachedSimulation& cachedSimulation = _factory.getCachedSimulation(cacheDir.c_str(), cacheName.c_str(), cfName.c_str());
                 const glm::crowdio::GlmSimulationData* simuData = cachedSimulation.getFinalSimulationData();
                 //const glm::crowdio::GlmFrameData* frameData = cachedSimulation.getFinalFrameData(currentFrame, UINT32_MAX, true);
@@ -596,6 +643,45 @@ namespace glm
                     {
                         _startFrame = glm::max(cfStartFrame, _startFrame);
                         _endFrame = glm::min(cfEndFrame, _endFrame);
+                    }
+                }
+
+                glm::PODArray<int64_t> excludedEntities;
+                glm::Array<const glm::crowdio::glmHistoryRuntimeStructure*> historyStructures;
+                cachedSimulation.getHistoryRuntimeStructures(historyStructures);
+                glm::crowdio::createEntityExclusionList(excludedEntities, cachedSimulation.getSrcSimulationData(), _factory.getLayoutHistories(), historyStructures);
+                size_t maxEntities = (size_t)floorf(simuData->_entityCount * renderPercent);
+                for (uint32_t iEntity = 0; iEntity < simuData->_entityCount; ++iEntity)
+                {
+
+                    int64_t entityId = simuData->_entityIds[iEntity];
+                    if (entityId < 0)
+                    {
+                        // entity was probably killed
+                        continue;
+                    }
+
+                    glm::GlmString entityName = "Entity_" + glm::toString(entityId);
+
+                    SdfPath entityPath = cfPath.AppendChild(TfToken(entityName.c_str()));
+                    _primSpecPaths.insert(entityPath);
+                    cfChildNames.push_back(TfToken(entityName.c_str()));
+
+                    //bool excludedEntity = frameData->_entityEnabled[iEntity] != 1;
+                    bool excludedEntity = false;
+                    if (!excludedEntity)
+                    {
+                        excludedEntity = iEntity >= maxEntities;
+                        if (!excludedEntity)
+                        {
+                            size_t excludedEntityIdx;
+                            excludedEntity = glm::glmFindIndex(excludedEntities.begin(), excludedEntities.end(), entityId, excludedEntityIdx);
+                        }
+                    }
+
+                    if (excludedEntity)
+                    {
+                        continue;
                     }
                 }
             }

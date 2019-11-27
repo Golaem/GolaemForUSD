@@ -32,6 +32,7 @@ namespace glm
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
+        TF_DECLARE_WEAK_AND_REF_PTRS(GolaemUSDFileFormat);
 
         class GolaemUSDFileFormat : public SdfFileFormat, public PcpDynamicFileFormatInterface
         {

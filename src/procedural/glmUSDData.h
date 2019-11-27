@@ -41,9 +41,9 @@ namespace glm
     xx(TfToken, glmDestTerrain, "")     \
     xx(bool, glmEnableLayout, true)     \
     xx(TfToken, glmLayoutFiles, "")     \
-    xx(int, glmDrawPercent, 0)          \
-    xx(int, glmDisplayMode, 0)          \
-    xx(int, glmGeoTag, 0)
+    xx(int, glmDrawPercent, 100)        \
+    xx(short, glmDisplayMode, 2)        \
+    xx(short, glmGeoTag, 0)
         // clang-format on
 
         // A token of the same name must be defined for each parameter in the macro

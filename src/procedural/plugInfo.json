@@ -2,8 +2,18 @@
     "Plugins": [
         {
             "Info": {
+                "SdfMetadata": {
+                    "GolaemUSD_Params": {
+                        "type": "dictionary",
+                        "displayGroup": "Core",
+                        "appliesTo": [
+                            "prims"
+                        ],
+                        "documentation:": "All the golaem parameters as a dictionary."
+                    }
+                },
                 "Types": {
-                    "GolaemUSDFileFormat": {
+                    "glm::usdplugin::GolaemUSDFileFormat": {
                         "bases": [
                             "SdfFileFormat"
                         ],

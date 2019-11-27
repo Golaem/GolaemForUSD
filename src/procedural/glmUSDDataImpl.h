@@ -17,6 +17,17 @@ namespace glm
     {
         using namespace PXR_INTERNAL_NS;
 
+        struct GolaemDisplayMode
+        {
+            enum Value
+            {
+                BOUNDING_BOX,
+                SKELETON,
+                SKINMESH,
+                END
+            };
+        };
+
         class GolaemUSD_DataImpl
         {
         private:
@@ -39,7 +50,7 @@ namespace glm
             // Cached list of the names of all child prims for each generated prim spec
             // that is not a leaf. The child prim names are the same for all prims that
             // make up the cube layout hierarchy.
-            std::vector<TfToken> _primChildNames;
+            TfHashMap<SdfPath, std::vector<TfToken>, SdfPath::Hash> _primChildNames;
 
             // cached data for each entity type
             struct EntityTypeData

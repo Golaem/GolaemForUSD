@@ -21,14 +21,21 @@ namespace glm
     {
         using namespace PXR_INTERNAL_NS;
 
-        enum GolaemErrorCodes
+        struct GolaemErrorCodes
         {
-            GLM_ERROR_CODE,
+            enum Value
+            {
+                GOLAEM_ERROR,
+                GOLAEM_SDK_ERROR,
+                END,
+            };
         };
+        
 
         TF_REGISTRY_FUNCTION(TfEnum)
         {
-            TF_ADD_ENUM_NAME(GLM_ERROR_CODE);
+            TF_ADD_ENUM_NAME(GolaemErrorCodes::GOLAEM_ERROR, "[Golaem]");
+            TF_ADD_ENUM_NAME(GolaemErrorCodes::GOLAEM_SDK_ERROR, "[GolaemSDK]");
         }
 
         //-----------------------------------------------------------------------------
@@ -44,35 +51,37 @@ namespace glm
         //-----------------------------------------------------------------------------
         void USDLogger::trace(glm::Log::Module module, glm::Log::Severity severity, const char* msg, const char*, int, const char*)
         {
-            std::string info = "";
+            glm::GlmString glmMessage = msg;
+            glmMessage += "\n";
+            GolaemErrorCodes::Value errorCode = GolaemErrorCodes::END;
             if (module == Log::CROWD)
             {
-                info = "Golaem";
+                errorCode = GolaemErrorCodes::GOLAEM_ERROR;
             }
             else if (module == Log::SDK)
             {
-                info = "GolaemSDK";
+                errorCode = GolaemErrorCodes::GOLAEM_SDK_ERROR;
             }
             switch (severity)
             {
             case glm::Log::LOG_ERROR:
             {
-                TF_ERROR(info, GLM_ERROR_CODE, msg);
+                TF_ERROR(errorCode, glmMessage.c_str());
             }
             break;
             case glm::Log::LOG_WARNING:
             {
-                TF_WARN(info, GLM_ERROR_CODE, msg);
+                TF_WARN(errorCode, glmMessage.c_str());
             }
             break;
             case glm::Log::LOG_INFO:
             {
-                TF_STATUS(info, GLM_ERROR_CODE, msg);
+                TF_STATUS(errorCode, glmMessage.c_str());
             }
             break;
             case glm::Log::LOG_DEBUG:
             {
-                TF_STATUS(info, GLM_ERROR_CODE, msg);
+                TF_STATUS(errorCode, glmMessage.c_str());
             }
             break;
             default:
