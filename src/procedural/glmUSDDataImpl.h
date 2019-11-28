@@ -52,20 +52,42 @@ namespace glm
             // make up the cube layout hierarchy.
             TfHashMap<SdfPath, std::vector<TfToken>, SdfPath::Hash> _primChildNames;
 
-            // cached data for each entity type
-            struct EntityTypeData
+            struct EntityMeshData;
+            struct EntityVolatileData
             {
-                GfVec3f halfExtents;
+                bool firstCompute = true;
+                double computedTimeSample = 0;
+                bool excluded = false;
+                bool enabled = true; // can vary during simulation (kill, emit)
+                GfVec3f pos{0, 0, 0};
+                glm::crowdio::InputEntityGeoData inputGeoData;
+                const glm::GolaemCharacter* character = NULL;
+                glm::Array<EntityMeshData*> meshData;
+                glm::SpinLock* cachedSimulationLock;
             };
-            TfHashMap<SdfPath, EntityTypeData, SdfPath::Hash> _entityTypeDataMap;
 
             // cached data for each entity
             struct EntityData
             {
-                GfVec3f pos;
-                EntityTypeData* entityTypeData;
+                mutable EntityVolatileData data;
             };
             TfHashMap<SdfPath, EntityData, SdfPath::Hash> _entityDataMap;
+
+            struct EntityMeshVolatileData
+            {
+                VtVec3fArray points;
+                VtIntArray faceVertexCounts;
+                VtIntArray faceVertexIndices;
+            };
+            struct EntityMeshData
+            {
+                int meshIdx = -1;
+                EntityData* entityData = NULL;
+                mutable EntityMeshVolatileData data;
+            };
+            TfHashMap<SdfPath, EntityMeshData, SdfPath::Hash> _entityMeshDataMap;
+
+            mutable glm::GlmMap<const glm::crowdio::CachedSimulation*, glm::SpinLock> _cachedSimulationLocks;
 
         public:
             GolaemUSD_DataImpl(const GolaemUSD_DataParams& params);
@@ -113,6 +135,7 @@ namespace glm
             /// Computes the value for the time sample if the spec path is one of the
             /// animated properties.
             bool QueryTimeSample(const SdfPath& path, double time, VtValue* value) const;
+
         private:
             // Initializes the cached data from the params object.
             void _InitFromParams();
