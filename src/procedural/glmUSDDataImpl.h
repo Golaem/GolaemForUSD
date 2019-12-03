@@ -57,32 +57,35 @@ namespace glm
             {
                 bool firstCompute = true;
                 double computedTimeSample = 0;
-                bool excluded = false;
+                bool excluded = false; // excluded by layout - the entity will always be empty
                 bool enabled = true; // can vary during simulation (kill, emit)
                 GfVec3f pos{0, 0, 0};
+                uint32_t bonePositionOffset = 0;
                 glm::crowdio::InputEntityGeoData inputGeoData;
-                const glm::GolaemCharacter* character = NULL;
                 glm::Array<EntityMeshData*> meshData;
                 glm::SpinLock* cachedSimulationLock;
+                glm::SpinLock _entityComputeLock; // do not allow simultaneous computes of the same entity
             };
 
             // cached data for each entity
             struct EntityData
             {
                 mutable EntityVolatileData data;
+                const glm::GolaemCharacter* character = NULL;
+                TfHashMap<SdfPath, size_t, SdfPath::Hash> meshIds;
             };
             TfHashMap<SdfPath, EntityData, SdfPath::Hash> _entityDataMap;
 
             struct EntityMeshVolatileData
             {
-                VtVec3fArray points;
                 VtIntArray faceVertexCounts;
                 VtIntArray faceVertexIndices;
+                VtVec3fArray points;
+                VtVec3fArray normals; // stored by polygon vertex
             };
             struct EntityMeshData
             {
-                int meshIdx = -1;
-                EntityData* entityData = NULL;
+                const EntityData* entityData = NULL;
                 mutable EntityMeshVolatileData data;
             };
             TfHashMap<SdfPath, EntityMeshData, SdfPath::Hash> _entityMeshDataMap;
@@ -144,6 +147,11 @@ namespace glm
             bool _IsAnimatedProperty(const SdfPath& path) const;
             bool _HasPropertyDefaultValue(const SdfPath& path, VtValue* value) const;
             bool _HasPropertyTypeNameValue(const SdfPath& path, VtValue* value) const;
+            bool _HasPropertyInterpolation(const SdfPath& path, VtValue* value) const;
+
+            void _ComputeEntityMeshNames(glm::Array<glm::GlmString>& meshNames, const EntityData* entityData) const;
+            void _ComputeEntity(const EntityData* entityData, double time) const;
+            void _InvalidateEntity(const EntityData* entityData) const;
         };
     } // namespace usdplugin
 } // namespace glm

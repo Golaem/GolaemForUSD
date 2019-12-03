@@ -15,7 +15,7 @@ list_files( "src/version" "h;cpp;rc")
 # Create a library
 add_library( ${PROJECT_NAME} SHARED ${LIST_FILES} )
 message("PXR_usd_LIBRARY=${PXR_usd_LIBRARY}")
-target_link_libraries( ${PROJECT_NAME} usd)
+target_link_libraries( ${PROJECT_NAME} usd usdGeom)
 
 string(REGEX REPLACE "^glm" "USD_" CUSTOM_PROJECT_LABEL "${PROJECT_NAME}" )
 
