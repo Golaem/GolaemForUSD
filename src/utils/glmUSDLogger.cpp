@@ -26,7 +26,13 @@ namespace glm
             enum Value
             {
                 GOLAEM_ERROR,
+                GOLAEM_WARNING,
+                GOLAEM_INFO,
+                GOLAEM_DEBUG,
                 GOLAEM_SDK_ERROR,
+                GOLAEM_SDK_WARNING,
+                GOLAEM_SDK_INFO,
+                GOLAEM_SDK_DEBUG,
                 END,
             };
         };
@@ -34,8 +40,14 @@ namespace glm
 
         TF_REGISTRY_FUNCTION(TfEnum)
         {
-            TF_ADD_ENUM_NAME(GolaemErrorCodes::GOLAEM_ERROR, "[Golaem]");
-            TF_ADD_ENUM_NAME(GolaemErrorCodes::GOLAEM_SDK_ERROR, "[GolaemSDK]");
+            TF_ADD_ENUM_NAME(GolaemErrorCodes::GOLAEM_ERROR, "[Golaem::ERROR]");
+            TF_ADD_ENUM_NAME(GolaemErrorCodes::GOLAEM_WARNING, "[Golaem::WARNING]");
+            TF_ADD_ENUM_NAME(GolaemErrorCodes::GOLAEM_INFO, "[Golaem::INFO]");
+            TF_ADD_ENUM_NAME(GolaemErrorCodes::GOLAEM_DEBUG, "[Golaem::DEBUG]");
+            TF_ADD_ENUM_NAME(GolaemErrorCodes::GOLAEM_SDK_ERROR, "[GolaemSDK::ERROR]");
+            TF_ADD_ENUM_NAME(GolaemErrorCodes::GOLAEM_SDK_WARNING, "[GolaemSDK::WARNING]");
+            TF_ADD_ENUM_NAME(GolaemErrorCodes::GOLAEM_SDK_INFO, "[GolaemSDK::INFO]");
+            TF_ADD_ENUM_NAME(GolaemErrorCodes::GOLAEM_SDK_DEBUG, "[GolaemSDK::DEBUG]");
         }
 
         //-----------------------------------------------------------------------------
@@ -53,40 +65,17 @@ namespace glm
         {
             glm::GlmString glmMessage = msg;
             glmMessage += "\n";
-            GolaemErrorCodes::Value errorCode = GolaemErrorCodes::END;
+            GolaemErrorCodes::Value errorCodeBase = GolaemErrorCodes::END;
             if (module == Log::CROWD)
             {
-                errorCode = GolaemErrorCodes::GOLAEM_ERROR;
+                errorCodeBase = GolaemErrorCodes::GOLAEM_ERROR;
             }
             else if (module == Log::SDK)
             {
-                errorCode = GolaemErrorCodes::GOLAEM_SDK_ERROR;
+                errorCodeBase = GolaemErrorCodes::GOLAEM_SDK_ERROR;
             }
-            switch (severity)
-            {
-            case glm::Log::LOG_ERROR:
-            {
-                TF_ERROR(errorCode, glmMessage.c_str());
-            }
-            break;
-            case glm::Log::LOG_WARNING:
-            {
-                TF_WARN(errorCode, glmMessage.c_str());
-            }
-            break;
-            case glm::Log::LOG_INFO:
-            {
-                TF_STATUS(errorCode, glmMessage.c_str());
-            }
-            break;
-            case glm::Log::LOG_DEBUG:
-            {
-                TF_STATUS(errorCode, glmMessage.c_str());
-            }
-            break;
-            default:
-                break;
-            }
+            GolaemErrorCodes::Value errorCode = (GolaemErrorCodes::Value)(errorCodeBase + severity);
+            TF_STATUS(errorCode, glmMessage.c_str());
         }
     } // namespace usdplugin
 } // namespace glm
