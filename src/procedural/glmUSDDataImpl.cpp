@@ -557,7 +557,7 @@ namespace glm
                 *tLower = *tUpper = _startFrame;
                 return true;
             }
-            // Last time sample will alway be size - 1.
+            // Last time sample will always be _endFrame.
             if (time >= _endFrame)
             {
                 *tLower = *tUpper = _endFrame;
@@ -749,7 +749,6 @@ namespace glm
 
             float renderPercent = _params.glmDrawPercent * 0.01f;
             short geoTag = _params.glmGeoTag;
-            //GolaemDisplayMode::Value displayMode = (GolaemDisplayMode::Value)_params.glmDisplayMode;
 
             _factory.loadGolaemCharacters(characterFiles.c_str());
 

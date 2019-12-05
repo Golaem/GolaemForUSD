@@ -122,7 +122,7 @@ namespace glm
             /// paths.
             const std::set<double>& ListTimeSamplesForPath(const SdfPath& path) const;
 
-            /// Returns the total number of animation frames iif the spec path is for
+            /// Returns the total number of animation frames if the spec path is for
             /// one of the animated properties. Returns 0 for all other spec paths.
             size_t GetNumTimeSamplesForPath(const SdfPath& path) const;
 
