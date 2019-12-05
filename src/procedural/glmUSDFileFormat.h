@@ -85,7 +85,7 @@ namespace glm
                 const VtValue& contextDependencyData) const override;
 
         protected:
-            SDF_FILE_FORMAT_FACTORY_ACCESS;
+            friend class Sdf_FileFormatFactory<GolaemUSDFileFormat>;
 
             virtual ~GolaemUSDFileFormat();
             GolaemUSDFileFormat();
