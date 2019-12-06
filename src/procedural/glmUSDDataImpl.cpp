@@ -676,6 +676,12 @@ namespace glm
         }
 
         //-----------------------------------------------------------------------------
+        glm::GlmString sanitizeMeshName(const glm::GlmString& meshName)
+        {
+            return glm::replaceString(meshName, ":", "_");
+        }
+
+        //-----------------------------------------------------------------------------
         void GolaemUSD_DataImpl::_InitFromParams()
         {
             _startFrame = 0;
@@ -922,7 +928,7 @@ namespace glm
 
                     for (size_t iMesh = 0, meshCount = entityMeshNames.size(); iMesh < meshCount; ++iMesh)
                     {
-                        TfToken meshName(entityMeshNames[iMesh].c_str());
+                        TfToken meshName(sanitizeMeshName(entityMeshNames[iMesh]).c_str());
                         SdfPath meshPath = entityPath.AppendChild(meshName);
                         _primSpecPaths.insert(meshPath);
                         entityChildNames.push_back(meshName);
