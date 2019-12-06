@@ -14,7 +14,13 @@ list_files( "src/version" "h;cpp;rc")
 
 # Create a library
 add_library( ${PROJECT_NAME} SHARED ${LIST_FILES} )
+
+set_target_properties( ${PROJECT_NAME} PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD_DEBUG ON )
+
 target_link_libraries( ${PROJECT_NAME} usd usdGeom)
+
+# cannot compile debug - windows or linux
+set( CROWD_INSTALL_SKIP_DEBUG ON )
 
 string(REGEX REPLACE "^glm" "USD_" CUSTOM_PROJECT_LABEL "${PROJECT_NAME}" )
 
