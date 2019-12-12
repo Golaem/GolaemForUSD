@@ -126,7 +126,7 @@ namespace glm
             (*_entityMeshProperties)[_entityMeshPropertyTokens->faceVertexCounts].defaultValue = VtValue(VtIntArray());
             (*_entityMeshProperties)[_entityMeshPropertyTokens->faceVertexIndices].defaultValue = VtValue(VtIntArray());
 
-            (*_entityMeshProperties)[_entityMeshPropertyTokens->orientation].defaultValue = VtValue(TfToken("leftHanded"));
+            (*_entityMeshProperties)[_entityMeshPropertyTokens->orientation].defaultValue = VtValue(TfToken("rightHanded"));
             (*_entityMeshProperties)[_entityMeshPropertyTokens->orientation].isAnimated = false;
             // Use the schema to derive the type name tokens from each property's
             // default value.
@@ -1153,7 +1153,13 @@ namespace glm
                     meshNames.resize(meshCount);
                     for (size_t iRenderMesh = 0; iRenderMesh < meshCount; ++iRenderMesh)
                     {
-                        meshNames[iRenderMesh] = outputData._meshAssetNames[outputData._meshAssetNameIndices[iRenderMesh]];
+                        glm::GlmString& meshName = meshNames[iRenderMesh];
+                        meshName = outputData._meshAssetNames[outputData._meshAssetNameIndices[iRenderMesh]];
+                        int materialIdx = outputData._meshAssetMaterialIndices[iRenderMesh];
+                        if (materialIdx != 0)
+                        {
+                            meshName += glm::toString(materialIdx);
+                        }
                     }
                 }
             }
@@ -1406,12 +1412,12 @@ namespace glm
                                         vertexMasks.assign(fbxVertexCount, -1);
                                         polygonMasks.assign(fbxPolyCount, 0);
 
-                                        unsigned int meshMtlIdx = outputData._meshAssetMaterialIndices[iRenderMesh];
+                                        int meshMtlIdx = outputData._meshAssetMaterialIndices[iRenderMesh];
 
                                         // check material id and reconstruct data
                                         for (unsigned int iFbxPoly = 0; iFbxPoly < fbxPolyCount; ++iFbxPoly)
                                         {
-                                            unsigned int currentMtlIdx = 0;
+                                            int currentMtlIdx = 0;
                                             if (hasMaterials)
                                             {
                                                 currentMtlIdx = materialElement->GetIndexArray().GetAt(iFbxPoly);
@@ -1450,12 +1456,12 @@ namespace glm
                                         int& shadingGroupIdx = meshShadingGroups[iRenderMesh];
 
                                         // find shader assets
-                                        unsigned int iMaterial = outputData._meshAssetMaterialIndices[iRenderMesh];
+                                        int iMaterial = outputData._meshAssetMaterialIndices[iRenderMesh];
                                         int meshAssetIdx = entityData->character->findMeshAssetIdx(meshName);
                                         if (meshAssetIdx != -1)
                                         {
                                             const glm::MeshAsset& meshAsset = entityData->character->_meshAssets[meshAssetIdx];
-                                            if (iMaterial < meshAsset._shadingGroups.size())
+                                            if (iMaterial < meshAsset._shadingGroups.sizeInt())
                                             {
                                                 shadingGroupIdx = meshAsset._shadingGroups[iMaterial];
                                             }
@@ -1509,12 +1515,12 @@ namespace glm
                                         int& shadingGroupIdx = meshShadingGroups[iRenderMesh];
 
                                         // find shader assets
-                                        unsigned int iMaterial = outputData._meshAssetMaterialIndices[iRenderMesh];
+                                        int iMaterial = outputData._meshAssetMaterialIndices[iRenderMesh];
                                         int meshAssetIdx = entityData->character->findMeshAssetIdx(meshName);
                                         if (meshAssetIdx != -1)
                                         {
                                             const glm::MeshAsset& meshAsset = entityData->character->_meshAssets[meshAssetIdx];
-                                            if (iMaterial < meshAsset._shadingGroups.size())
+                                            if (iMaterial < meshAsset._shadingGroups.sizeInt())
                                             {
                                                 shadingGroupIdx = meshAsset._shadingGroups[iMaterial];
                                             }
@@ -1644,12 +1650,12 @@ namespace glm
                                     vertexMasks.assign(fbxVertexCount, -1);
                                     polygonMasks.assign(fbxPolyCount, 0);
 
-                                    unsigned int meshMtlIdx = outputData._meshAssetMaterialIndices[iRenderMesh];
+                                    int meshMtlIdx = outputData._meshAssetMaterialIndices[iRenderMesh];
 
                                     // check material id and reconstruct data
                                     for (unsigned int iFbxPoly = 0; iFbxPoly < fbxPolyCount; ++iFbxPoly)
                                     {
-                                        unsigned int currentMtlIdx = 0;
+                                        int currentMtlIdx = 0;
                                         if (hasMaterials)
                                         {
                                             currentMtlIdx = materialElement->GetIndexArray().GetAt(iFbxPoly);
@@ -1723,7 +1729,7 @@ namespace glm
                                             int polySize = fbxMesh->GetPolygonSize(iFbxPoly);
                                             if (polygonMasks[iFbxPoly])
                                             {
-                                                for (int iPolyVertex = 0; iPolyVertex < polySize; ++iPolyVertex)
+                                                for (int iPolyVertex = 0; iPolyVertex < polySize; ++iPolyVertex, ++iFbxNormal, ++iActualPolyVertex)
                                                 {
                                                     // meshDeformedNormals contains all fbx normals, not just the ones that were filtered by polygonMasks
                                                     // do not reverse polygon order
@@ -1743,7 +1749,10 @@ namespace glm
                                                     }
                                                 }
                                             }
-                                            iFbxNormal += polySize;
+                                            else
+                                            {
+                                                iFbxNormal += polySize;
+                                            }
                                         }
                                     }
                                 }
