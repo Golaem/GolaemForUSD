@@ -55,6 +55,10 @@ namespace glm
             ((points, "points"))
             ((subdivisionScheme, "subdivisionScheme"))
             ((normals, "normals")));
+
+        TF_DEFINE_PRIVATE_TOKENS(
+            _entityMeshRelationshipTokens,
+            ((materialBinding, "material:binding")));
         // clang-format on
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -74,6 +78,14 @@ namespace glm
         using _LeafPrimPropertyMap =
             std::map<TfToken, _EntityPrimPropertyInfo, TfTokenFastArbitraryLessThan>;
 
+        struct _EntityPrimRelationshipInfo
+        {
+            VtValue defaultTargetPath;
+        };
+
+        using _LeafPrimRelationshiphMap =
+            std::map<TfToken, _EntityPrimRelationshipInfo, TfTokenFastArbitraryLessThan>;
+
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4459)
@@ -84,8 +96,7 @@ namespace glm
         {
 
             // Define the default value types for our animated properties.
-            (*_entityProperties)[_entityPropertyTokens->xformOpTranslate].defaultValue =
-                VtValue(GfVec3f(0));
+            (*_entityProperties)[_entityPropertyTokens->xformOpTranslate].defaultValue = VtValue(GfVec3f(0));
 
             (*_entityProperties)[_entityPropertyTokens->xformOpOrder].defaultValue = VtValue(VtTokenArray{_entityPropertyTokens->xformOpTranslate});
             (*_entityProperties)[_entityPropertyTokens->xformOpOrder].isAnimated = false;
@@ -110,7 +121,6 @@ namespace glm
         TF_MAKE_STATIC_DATA(
             (_LeafPrimPropertyMap), _entityMeshProperties)
         {
-
             // Define the default value types for our animated properties.
             (*_entityMeshProperties)[_entityMeshPropertyTokens->points].defaultValue = VtValue(VtVec3fArray());
 
@@ -128,6 +138,7 @@ namespace glm
 
             (*_entityMeshProperties)[_entityMeshPropertyTokens->orientation].defaultValue = VtValue(TfToken("rightHanded"));
             (*_entityMeshProperties)[_entityMeshPropertyTokens->orientation].isAnimated = false;
+
             // Use the schema to derive the type name tokens from each property's
             // default value.
             for (auto& it : *_entityMeshProperties)
@@ -135,6 +146,15 @@ namespace glm
                 it.second.typeName =
                     SdfSchema::GetInstance().FindType(it.second.defaultValue).GetAsToken();
             }
+        }
+
+        TF_MAKE_STATIC_DATA(
+            (_LeafPrimRelationshiphMap), _entityMeshRelationships)
+        {
+            std::vector<SdfPath> defaultMatList;
+            defaultMatList.push_back(SdfPath("/Root/Materials/DefaultGolaemMat"));
+            SdfPathListOp defaultMats = SdfPathListOp::CreateExplicit(defaultMatList);
+            (*_entityMeshRelationships)[_entityMeshRelationshipTokens->materialBinding].defaultTargetPath = VtValue(defaultMats);
         }
 
 #ifdef _MSC_VER
@@ -200,20 +220,28 @@ namespace glm
         SdfSpecType GolaemUSD_DataImpl::GetSpecType(const SdfPath& path) const
         {
             // All specs are generated.
-            if (path.IsPropertyPath())
+            if (path.IsPropertyPath()) // IsPropertyPath includes relational attributes
             {
+                const TfToken& nameToken = path.GetNameToken();
+                SdfPath primPath = path.GetAbsoluteRootOrPrimPath();
                 // A specific set of defined properties exist on the leaf prims only
                 // as attributes. Non leaf prims have no properties.
-                if (_entityProperties->count(path.GetNameToken()) &&
-                    TfMapLookupPtr(_entityDataMap, path.GetAbsoluteRootOrPrimPath()) != NULL)
+                if (_entityProperties->count(nameToken) &&
+                    TfMapLookupPtr(_entityDataMap, primPath) != NULL)
                 {
                     return SdfSpecTypeAttribute;
                 }
 
-                if (_entityMeshProperties->count(path.GetNameToken()) &&
-                    TfMapLookupPtr(_entityMeshDataMap, path.GetAbsoluteRootOrPrimPath()) != NULL)
+                if (_entityMeshProperties->count(nameToken) &&
+                    TfMapLookupPtr(_entityMeshDataMap, primPath) != NULL)
                 {
                     return SdfSpecTypeAttribute;
+                }
+
+                if (_entityMeshRelationships->count(nameToken) &&
+                    TfMapLookupPtr(_entityMeshDataMap, primPath) != NULL)
+                {
+                    return SdfSpecTypeRelationship;
                 }
             }
             else
@@ -251,6 +279,10 @@ namespace glm
                 {
                     return _HasPropertyInterpolation(path, value);
                 }
+                else if (field == SdfFieldKeys->TargetPaths)
+                {
+                    return _HasTargetPathValue(path, value);
+                }
                 else if (field == SdfFieldKeys->TimeSamples)
                 {
                     // Only animated properties have time samples.
@@ -287,24 +319,15 @@ namespace glm
                 // Default prim is always the root prim.
                 if (field == SdfFieldKeys->DefaultPrim)
                 {
-                    if (path == SdfPath::AbsoluteRootPath())
-                    {
-                        RETURN_TRUE_WITH_OPTIONAL_VALUE(_GetRootPrimPath().GetNameToken());
-                    }
+                    RETURN_TRUE_WITH_OPTIONAL_VALUE(_GetRootPrimPath().GetNameToken());
                 }
                 if (field == SdfFieldKeys->StartTimeCode)
                 {
-                    if (path == SdfPath::AbsoluteRootPath())
-                    {
-                        RETURN_TRUE_WITH_OPTIONAL_VALUE(double(_startFrame));
-                    }
+                    RETURN_TRUE_WITH_OPTIONAL_VALUE(double(_startFrame));
                 }
                 if (field == SdfFieldKeys->EndTimeCode)
                 {
-                    if (path == SdfPath::AbsoluteRootPath())
-                    {
-                        RETURN_TRUE_WITH_OPTIONAL_VALUE(double(_endFrame));
-                    }
+                    RETURN_TRUE_WITH_OPTIONAL_VALUE(double(_endFrame));
                 }
             }
             else
@@ -336,8 +359,9 @@ namespace glm
 
                 if (field == SdfFieldKeys->Active)
                 {
+                    SdfPath primPath = path.GetAbsoluteRootOrPrimPath();
                     // Only leaf prim properties have time samples
-                    const EntityData* entityData = TfMapLookupPtr(_entityDataMap, path.GetAbsoluteRootOrPrimPath());
+                    const EntityData* entityData = TfMapLookupPtr(_entityDataMap, primPath);
                     if (entityData != NULL)
                     {
                         RETURN_TRUE_WITH_OPTIONAL_VALUE(!entityData->data.excluded);
@@ -367,7 +391,9 @@ namespace glm
                     }
                     if (TfMapLookupPtr(_entityMeshDataMap, path) != NULL)
                     {
-                        RETURN_TRUE_WITH_OPTIONAL_VALUE(_entityMeshPropertyTokens->allTokens);
+                        std::vector<TfToken> meshTokens = _entityMeshPropertyTokens->allTokens;
+                        meshTokens.insert(meshTokens.end(), _entityMeshRelationshipTokens->allTokens.begin(), _entityMeshRelationshipTokens->allTokens.end());
+                        RETURN_TRUE_WITH_OPTIONAL_VALUE(meshTokens);
                     }
                 }
             }
@@ -412,6 +438,13 @@ namespace glm
                         return;
                     }
                 }
+                for (const TfToken& propertyName : _entityMeshRelationshipTokens->allTokens)
+                {
+                    if (!visitor->VisitSpec(data, it.first.AppendProperty(propertyName)))
+                    {
+                        return;
+                    }
+                }
             }
         }
 
@@ -420,6 +453,8 @@ namespace glm
         {
             if (path.IsPropertyPath())
             {
+                const TfToken& nameToken = path.GetNameToken();
+                SdfPath primPath = path.GetAbsoluteRootOrPrimPath();
                 // For properties, check that it's a valid leaf prim property
                 static std::vector<TfToken> animPropFields(
                     {SdfFieldKeys->TypeName,
@@ -429,8 +464,8 @@ namespace glm
                     {SdfFieldKeys->TypeName,
                      SdfFieldKeys->Default});
                 {
-                    const _EntityPrimPropertyInfo* entityPropInfo = TfMapLookupPtr(*_entityProperties, path.GetNameToken());
-                    if (entityPropInfo && TfMapLookupPtr(_entityDataMap, path.GetAbsoluteRootOrPrimPath()) != NULL)
+                    const _EntityPrimPropertyInfo* entityPropInfo = TfMapLookupPtr(*_entityProperties, nameToken);
+                    if (entityPropInfo && TfMapLookupPtr(_entityDataMap, primPath) != NULL)
                     {
                         // Include time sample field in the property is animated.
                         if (entityPropInfo->isAnimated)
@@ -439,14 +474,13 @@ namespace glm
                         }
                         else
                         {
-
                             return nonAnimPropFields;
                         }
                     }
                 }
                 {
-                    const _EntityPrimPropertyInfo* entityMeshPropInfo = TfMapLookupPtr(*_entityMeshProperties, path.GetNameToken());
-                    if (entityMeshPropInfo && TfMapLookupPtr(_entityMeshDataMap, path.GetAbsoluteRootOrPrimPath()) != NULL)
+                    const _EntityPrimPropertyInfo* entityMeshPropInfo = TfMapLookupPtr(*_entityMeshProperties, nameToken);
+                    if (entityMeshPropInfo && TfMapLookupPtr(_entityMeshDataMap, primPath) != NULL)
                     {
                         // Include time sample field in the property is animated.
                         if (entityMeshPropInfo->isAnimated)
@@ -474,6 +508,15 @@ namespace glm
                             }
                             return nonAnimPropFields;
                         }
+                    }
+                }
+                {
+                    const _EntityPrimRelationshipInfo* entityMeshRelInfo = TfMapLookupPtr(*_entityMeshRelationships, nameToken);
+                    if (entityMeshRelInfo && TfMapLookupPtr(_entityMeshDataMap, primPath) != NULL)
+                    {
+                        static std::vector<TfToken> relationshipFields(
+                            {SdfFieldKeys->TargetPaths});
+                        return relationshipFields;
                     }
                 }
             }
@@ -600,12 +643,13 @@ namespace glm
         //-----------------------------------------------------------------------------
         bool GolaemUSD_DataImpl::QueryTimeSample(const SdfPath& path, double time, VtValue* value) const
         {
+            SdfPath primPath = path.GetAbsoluteRootOrPrimPath();
             // Only leaf prim properties have time samples
-            const EntityData* entityData = TfMapLookupPtr(_entityDataMap, path.GetAbsoluteRootOrPrimPath());
+            const EntityData* entityData = TfMapLookupPtr(_entityDataMap, primPath);
             const EntityMeshData* meshData = NULL;
             if (entityData == NULL)
             {
-                meshData = TfMapLookupPtr(_entityMeshDataMap, path.GetAbsoluteRootOrPrimPath());
+                meshData = TfMapLookupPtr(_entityMeshDataMap, primPath);
                 entityData = meshData->entityData;
             }
             if (entityData == NULL || entityData->data.excluded)
@@ -615,15 +659,17 @@ namespace glm
 
             _ComputeEntity(entityData, time);
 
+            const TfToken& nameToken = path.GetNameToken();
+
             if (meshData == NULL)
             {
                 // this is an entity node
-                if (path.GetNameToken() == _entityPropertyTokens->xformOpTranslate)
+                if (nameToken == _entityPropertyTokens->xformOpTranslate)
                 {
                     // Animated position, anchored at the prim's layout position.
                     RETURN_TRUE_WITH_OPTIONAL_VALUE(entityData->data.pos);
                 }
-                if (path.GetNameToken() == _entityPropertyTokens->visibility)
+                if (nameToken == _entityPropertyTokens->visibility)
                 {
                     RETURN_TRUE_WITH_OPTIONAL_VALUE(entityData->data.enabled ? UsdGeomTokens->inherited : UsdGeomTokens->invisible);
                 }
@@ -631,19 +677,19 @@ namespace glm
             else
             {
                 // this is a mesh node
-                if (path.GetNameToken() == _entityMeshPropertyTokens->points)
+                if (nameToken == _entityMeshPropertyTokens->points)
                 {
                     RETURN_TRUE_WITH_OPTIONAL_VALUE(meshData->data.points);
                 }
-                if (path.GetNameToken() == _entityMeshPropertyTokens->normals)
+                if (nameToken == _entityMeshPropertyTokens->normals)
                 {
                     RETURN_TRUE_WITH_OPTIONAL_VALUE(meshData->data.normals);
                 }
-                if (path.GetNameToken() == _entityMeshPropertyTokens->faceVertexCounts)
+                if (nameToken == _entityMeshPropertyTokens->faceVertexCounts)
                 {
                     RETURN_TRUE_WITH_OPTIONAL_VALUE(meshData->data.faceVertexCounts);
                 }
-                if (path.GetNameToken() == _entityMeshPropertyTokens->faceVertexIndices)
+                if (nameToken == _entityMeshPropertyTokens->faceVertexIndices)
                 {
                     RETURN_TRUE_WITH_OPTIONAL_VALUE(meshData->data.faceVertexIndices);
                 }
@@ -950,20 +996,22 @@ namespace glm
         bool GolaemUSD_DataImpl::_IsAnimatedProperty(const SdfPath& path) const
         {
             // Check that it is a property id.
-            if (!path.IsPropertyPath())
+            if (!path.IsPrimPropertyPath())
             {
                 return false;
             }
+            const TfToken& nameToken = path.GetNameToken();
+            SdfPath primPath = path.GetAbsoluteRootOrPrimPath();
             // Check that its one of our animated property names.
-            const _EntityPrimPropertyInfo* propInfo = TfMapLookupPtr(*_entityProperties, path.GetNameToken());
+            const _EntityPrimPropertyInfo* propInfo = TfMapLookupPtr(*_entityProperties, nameToken);
             if (propInfo != NULL)
             {
-                return propInfo->isAnimated && TfMapLookupPtr(_entityDataMap, path.GetAbsoluteRootOrPrimPath()) != NULL;
+                return propInfo->isAnimated && TfMapLookupPtr(_entityDataMap, primPath) != NULL;
             }
-            propInfo = TfMapLookupPtr(*_entityMeshProperties, path.GetNameToken());
+            propInfo = TfMapLookupPtr(*_entityMeshProperties, nameToken);
             if (propInfo != NULL)
             {
-                return propInfo->isAnimated && TfMapLookupPtr(_entityMeshDataMap, path.GetAbsoluteRootOrPrimPath()) != NULL;
+                return propInfo->isAnimated && TfMapLookupPtr(_entityMeshDataMap, primPath) != NULL;
             }
             return false;
         }
@@ -972,32 +1020,34 @@ namespace glm
         bool GolaemUSD_DataImpl::_HasPropertyDefaultValue(const SdfPath& path, VtValue* value) const
         {
             // Check that it is a property id.
-            if (!path.IsPropertyPath())
+            if (!path.IsPrimPropertyPath())
             {
                 return false;
             }
 
             // Check that it is one of our property names.
-            const _EntityPrimPropertyInfo* propInfo = TfMapLookupPtr(*_entityProperties, path.GetNameToken());
+            const TfToken& nameToken = path.GetNameToken();
+            SdfPath primPath = path.GetAbsoluteRootOrPrimPath();
+            const _EntityPrimPropertyInfo* propInfo = TfMapLookupPtr(*_entityProperties, nameToken);
             if (propInfo != NULL)
             {
                 // Check that it belongs to a leaf prim before getting the default value
-                const EntityData* entityData = TfMapLookupPtr(_entityDataMap, path.GetAbsoluteRootOrPrimPath());
+                const EntityData* entityData = TfMapLookupPtr(_entityDataMap, primPath);
                 if (entityData)
                 {
                     if (value)
                     {
                         // Special case for translate property. Each leaf prim has its own
                         // default position.
-                        if (path.GetNameToken() == _entityPropertyTokens->xformOpTranslate)
+                        if (nameToken == _entityPropertyTokens->xformOpTranslate)
                         {
                             *value = VtValue(entityData->data.pos);
                         }
-                        else if (path.GetNameToken() == _entityPropertyTokens->visibility)
+                        else if (nameToken == _entityPropertyTokens->visibility)
                         {
                             *value = VtValue(entityData->data.enabled ? UsdGeomTokens->inherited : UsdGeomTokens->invisible);
                         }
-                        else if (path.GetNameToken() == _entityPropertyTokens->entityId)
+                        else if (nameToken == _entityPropertyTokens->entityId)
                         {
                             *value = VtValue(entityData->data.inputGeoData._entityId);
                         }
@@ -1010,28 +1060,28 @@ namespace glm
                 }
                 return false;
             }
-            propInfo = TfMapLookupPtr(*_entityMeshProperties, path.GetNameToken());
+            propInfo = TfMapLookupPtr(*_entityMeshProperties, nameToken);
             if (propInfo != NULL)
             {
                 // Check that it belongs to a leaf prim before getting the default value
-                const EntityMeshData* entityMeshData = TfMapLookupPtr(_entityMeshDataMap, path.GetAbsoluteRootOrPrimPath());
+                const EntityMeshData* entityMeshData = TfMapLookupPtr(_entityMeshDataMap, primPath);
                 if (entityMeshData)
                 {
                     if (value)
                     {
-                        if (path.GetNameToken() == _entityMeshPropertyTokens->points)
+                        if (nameToken == _entityMeshPropertyTokens->points)
                         {
                             *value = VtValue(entityMeshData->data.points);
                         }
-                        else if (path.GetNameToken() == _entityMeshPropertyTokens->normals)
+                        else if (nameToken == _entityMeshPropertyTokens->normals)
                         {
                             *value = VtValue(entityMeshData->data.normals);
                         }
-                        else if (path.GetNameToken() == _entityMeshPropertyTokens->faceVertexCounts)
+                        else if (nameToken == _entityMeshPropertyTokens->faceVertexCounts)
                         {
                             *value = VtValue(entityMeshData->data.faceVertexCounts);
                         }
-                        else if (path.GetNameToken() == _entityMeshPropertyTokens->faceVertexIndices)
+                        else if (nameToken == _entityMeshPropertyTokens->faceVertexIndices)
                         {
                             *value = VtValue(entityMeshData->data.faceVertexIndices);
                         }
@@ -1049,20 +1099,60 @@ namespace glm
         }
 
         //-----------------------------------------------------------------------------
-        bool GolaemUSD_DataImpl::_HasPropertyInterpolation(const SdfPath& path, VtValue* value) const
+        bool GolaemUSD_DataImpl::_HasTargetPathValue(const SdfPath& path, VtValue* value) const
         {
-            // Check that it is a property id.
+            // Check that it is a relationship id.
             if (!path.IsPropertyPath())
             {
                 return false;
             }
 
             // Check that it is one of our property names.
-            const _EntityPrimPropertyInfo* propInfo = TfMapLookupPtr(*_entityMeshProperties, path.GetNameToken());
+            const TfToken& nameToken = path.GetNameToken();
+            SdfPath primPath = path.GetAbsoluteRootOrPrimPath();
+            const _EntityPrimRelationshipInfo* relInfo = TfMapLookupPtr(*_entityMeshRelationships, nameToken);
+            if (relInfo != NULL)
+            {
+                // Check that it belongs to a leaf prim before getting the default value
+                const EntityMeshData* entityMeshData = TfMapLookupPtr(_entityMeshDataMap, primPath);
+                if (entityMeshData)
+                {
+                    if (value)
+                    {
+                        //if (nameToken == _entityMeshRelationshipTokens->materialBinding)
+                        //{
+                        //    *value = VtValue(entityMeshData->data.materialPath);
+                        //}
+                        //else
+                        {
+                            *value = relInfo->defaultTargetPath;
+                        }
+                    }
+                    return true;
+                }
+                return false;
+            }
+
+            return false;
+        }
+
+        //-----------------------------------------------------------------------------
+        bool GolaemUSD_DataImpl::_HasPropertyInterpolation(const SdfPath& path, VtValue* value) const
+        {
+            // Check that it is a property id.
+            if (!path.IsPrimPropertyPath())
+            {
+                return false;
+            }
+
+            // Check that it is one of our property names.
+            const TfToken& nameToken = path.GetNameToken();
+            SdfPath primPath = path.GetAbsoluteRootOrPrimPath();
+            const _EntityPrimPropertyInfo* propInfo = TfMapLookupPtr(*_entityMeshProperties, nameToken);
             if (propInfo != NULL)
             {
                 // Check that it belongs to a leaf prim before getting the interpolation value
-                const EntityMeshData* entityMeshData = TfMapLookupPtr(_entityMeshDataMap, path.GetAbsoluteRootOrPrimPath());
+                const EntityMeshData* entityMeshData = TfMapLookupPtr(_entityMeshDataMap, primPath);
                 if (entityMeshData)
                 {
                     if (value)
@@ -1084,17 +1174,19 @@ namespace glm
         bool GolaemUSD_DataImpl::_HasPropertyTypeNameValue(const SdfPath& path, VtValue* value) const
         {
             // Check that it is a property id.
-            if (!path.IsPropertyPath())
+            if (!path.IsPrimPropertyPath())
             {
                 return false;
             }
 
             // Check that it is one of our property names.
-            const _EntityPrimPropertyInfo* propInfo = TfMapLookupPtr(*_entityProperties, path.GetNameToken());
+            const TfToken& nameToken = path.GetNameToken();
+            SdfPath primPath = path.GetAbsoluteRootOrPrimPath();
+            const _EntityPrimPropertyInfo* propInfo = TfMapLookupPtr(*_entityProperties, nameToken);
             if (propInfo != NULL)
             {
                 // Check that it belongs to a leaf prim before getting the type name value
-                const EntityData* val = TfMapLookupPtr(_entityDataMap, path.GetAbsoluteRootOrPrimPath());
+                const EntityData* val = TfMapLookupPtr(_entityDataMap, primPath);
                 if (val)
                 {
                     if (value)
@@ -1106,11 +1198,11 @@ namespace glm
 
                 return false;
             }
-            propInfo = TfMapLookupPtr(*_entityMeshProperties, path.GetNameToken());
+            propInfo = TfMapLookupPtr(*_entityMeshProperties, nameToken);
             if (propInfo != NULL)
             {
                 // Check that it belongs to a leaf prim before getting the type name value
-                const EntityMeshData* val = TfMapLookupPtr(_entityMeshDataMap, path.GetAbsoluteRootOrPrimPath());
+                const EntityMeshData* val = TfMapLookupPtr(_entityMeshDataMap, primPath);
                 if (val)
                 {
                     if (value)
@@ -1122,6 +1214,7 @@ namespace glm
 
                 return false;
             }
+
             return false;
         }
 

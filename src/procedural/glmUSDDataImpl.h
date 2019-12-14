@@ -82,6 +82,7 @@ namespace glm
                 VtIntArray faceVertexIndices;
                 VtVec3fArray points;
                 VtVec3fArray normals; // stored by polygon vertex
+                SdfPath materialPath;
             };
             struct EntityMeshData
             {
@@ -146,6 +147,7 @@ namespace glm
             // Helper functions for queries about property specs.
             bool _IsAnimatedProperty(const SdfPath& path) const;
             bool _HasPropertyDefaultValue(const SdfPath& path, VtValue* value) const;
+            bool _HasTargetPathValue(const SdfPath& path, VtValue* value) const;
             bool _HasPropertyTypeNameValue(const SdfPath& path, VtValue* value) const;
             bool _HasPropertyInterpolation(const SdfPath& path, VtValue* value) const;
 
