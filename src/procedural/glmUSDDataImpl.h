@@ -28,6 +28,16 @@ namespace glm
             };
         };
 
+        struct GolaemMaterialAssignMode
+        {
+            enum Value
+            {
+                BY_SURFACE_SHADER,
+                BY_SHADING_GROUP,
+                END
+            };
+        };
+
         class GolaemUSD_DataImpl
         {
         private:
@@ -55,7 +65,6 @@ namespace glm
             struct EntityMeshData;
             struct EntityVolatileData
             {
-                bool firstCompute = true;
                 double computedTimeSample = 0;
                 bool excluded = false; // excluded by layout - the entity will always be empty
                 bool enabled = true; // can vary during simulation (kill, emit)
@@ -151,7 +160,7 @@ namespace glm
             bool _HasPropertyTypeNameValue(const SdfPath& path, VtValue* value) const;
             bool _HasPropertyInterpolation(const SdfPath& path, VtValue* value) const;
 
-            void _ComputeEntityMeshNames(glm::Array<glm::GlmString>& meshNames, const EntityData* entityData) const;
+            void _ComputeEntityMeshNames(glm::Array<glm::GlmString>& meshNames, glm::crowdio::OutputEntityGeoData& outputData, const EntityData* entityData) const;
             void _ComputeEntity(const EntityData* entityData, double time) const;
             void _InvalidateEntity(const EntityData* entityData) const;
         };

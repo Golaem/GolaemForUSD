@@ -30,20 +30,22 @@ namespace glm
         // functions for converting between file format arguments and dictionary values.
         // xx(TYPE, NAME, DEFAULT_VALUE)
         // clang-format off
-#define GOLAEM_USD_DATA_PARAMS_X_FIELDS \
-    xx(TfToken, glmCacheLibFile, "")    \
-    xx(TfToken, glmCacheLibItem, "")    \
-    xx(TfToken, glmCrowdFieldNames, "") \
-    xx(TfToken, glmCacheName, "")       \
-    xx(TfToken, glmCacheDir, "")        \
-    xx(TfToken, glmCharacterFiles, "")  \
-    xx(TfToken, glmSourceTerrain, "")   \
-    xx(TfToken, glmDestTerrain, "")     \
-    xx(bool, glmEnableLayout, true)     \
-    xx(TfToken, glmLayoutFiles, "")     \
-    xx(int, glmDrawPercent, 100)        \
-    xx(short, glmDisplayMode, 2)        \
-    xx(short, glmGeoTag, 0)
+#define GOLAEM_USD_DATA_PARAMS_X_FIELDS         \
+    xx(TfToken, glmCacheLibFile, "")            \
+    xx(TfToken, glmCacheLibItem, "")            \
+    xx(TfToken, glmCrowdFieldNames, "")         \
+    xx(TfToken, glmCacheName, "")               \
+    xx(TfToken, glmCacheDir, "")                \
+    xx(TfToken, glmCharacterFiles, "")          \
+    xx(TfToken, glmSourceTerrain, "")           \
+    xx(TfToken, glmDestTerrain, "")             \
+    xx(bool, glmEnableLayout, true)             \
+    xx(TfToken, glmLayoutFiles, "")             \
+    xx(int, glmDrawPercent, 100)                \
+    xx(short, glmDisplayMode, 2)                \
+    xx(short, glmGeoTag, 0)                     \
+    xx(TfToken, glmMaterialPath, "/Materials")  \
+    xx(short, glmMaterialAssignMode, 0)
         // clang-format on
 
         // A token of the same name must be defined for each parameter in the macro
@@ -63,7 +65,9 @@ namespace glm
     (glmLayoutFiles)                    \
     (glmDrawPercent)                    \
     (glmDisplayMode)                    \
-    (glmGeoTag)
+    (glmGeoTag)                         \
+    (glmMaterialPath)                   \
+    (glmMaterialAssignMode)
         // clang-format on
 
 #ifdef _MSC_VER
