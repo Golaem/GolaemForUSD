@@ -46,6 +46,7 @@ namespace glm
             GolaemUSD_DataParams _params;
 
             crowdio::SimulationCacheFactory _factory;
+            glm::Array<glm::PODArray<int>> _sgToSsPerChar;
 
             int _startFrame;
             int _endFrame;
@@ -67,7 +68,7 @@ namespace glm
             {
                 double computedTimeSample = 0;
                 bool excluded = false; // excluded by layout - the entity will always be empty
-                bool enabled = true; // can vary during simulation (kill, emit)
+                bool enabled = true;   // can vary during simulation (kill, emit)
                 GfVec3f pos{0, 0, 0};
                 uint32_t bonePositionOffset = 0;
                 glm::crowdio::InputEntityGeoData inputGeoData;
@@ -87,16 +88,19 @@ namespace glm
 
             struct EntityMeshVolatileData
             {
-                VtIntArray faceVertexCounts;
-                VtIntArray faceVertexIndices;
+                // these parameters are animated
+
                 VtVec3fArray points;
                 VtVec3fArray normals; // stored by polygon vertex
-                SdfPath materialPath;
             };
             struct EntityMeshData
             {
                 const EntityData* entityData = NULL;
                 mutable EntityMeshVolatileData data;
+                VtIntArray faceVertexCounts;
+                VtIntArray faceVertexIndices;
+                glm::Array<VtVec2fArray> uvSets; // stored by polygon vertex
+                SdfPathListOp materialPath;
             };
             TfHashMap<SdfPath, EntityMeshData, SdfPath::Hash> _entityMeshDataMap;
 
