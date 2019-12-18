@@ -11,7 +11,7 @@
 #ifdef _MSC_VER
 #define USD_INCLUDES_START   \
     __pragma(warning(push)); \
-    __pragma(warning(disable : 4003 4244 4305 4100 4275));
+    __pragma(warning(disable : 4003 4244 4305 4100 4275 4127 4996));
 #else
 #define USD_INCLUDES_START
 #endif

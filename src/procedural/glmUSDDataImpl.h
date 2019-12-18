@@ -28,6 +28,24 @@ namespace glm
             };
         };
 
+        struct GolaemMaterialAssignMode
+        {
+            enum Value
+            {
+                BY_SURFACE_SHADER,
+                BY_SHADING_GROUP,
+                END
+            };
+        };
+
+        struct CharacterShaderData
+        {
+            std::map<size_t, size_t> _globalToIntShaderAttrIdx;
+            std::map<size_t, size_t> _globalToFloatShaderAttrIdx;
+            std::map<size_t, size_t> _globalToStringShaderAttrIdx;
+            std::map<size_t, size_t> _globalToVectorShaderAttrIdx;
+        };
+
         class GolaemUSD_DataImpl
         {
         private:
@@ -36,6 +54,11 @@ namespace glm
             GolaemUSD_DataParams _params;
 
             crowdio::SimulationCacheFactory _factory;
+            glm::Array<glm::PODArray<int>> _sgToSsPerChar;
+            glm::Array<CharacterShaderData> _shaderDataPerChar;
+
+            glm::Array<GlmString> _shaderAttrTypes;
+            glm::Array<VtValue> _shaderAttrDefaultValues;
 
             int _startFrame;
             int _endFrame;
@@ -55,16 +78,20 @@ namespace glm
             struct EntityMeshData;
             struct EntityVolatileData
             {
-                bool firstCompute = true;
                 double computedTimeSample = 0;
                 bool excluded = false; // excluded by layout - the entity will always be empty
-                bool enabled = true; // can vary during simulation (kill, emit)
+                bool enabled = true;   // can vary during simulation (kill, emit)
                 GfVec3f pos{0, 0, 0};
                 uint32_t bonePositionOffset = 0;
                 glm::crowdio::InputEntityGeoData inputGeoData;
                 glm::Array<EntityMeshData*> meshData;
                 glm::SpinLock* cachedSimulationLock;
                 glm::SpinLock _entityComputeLock; // do not allow simultaneous computes of the same entity
+
+                glm::PODArray<int> intAttrValues;
+                glm::PODArray<float> floatAttrValues;
+                glm::Array<TfToken> stringAttrValues;
+                glm::Array<GfVec3f> vectorAttrValues;
             };
 
             // cached data for each entity
@@ -72,14 +99,14 @@ namespace glm
             {
                 mutable EntityVolatileData data;
                 const glm::GolaemCharacter* character = NULL;
-                TfHashMap<SdfPath, size_t, SdfPath::Hash> meshIds;
+                int characterIdx = -1;
             };
             TfHashMap<SdfPath, EntityData, SdfPath::Hash> _entityDataMap;
 
             struct EntityMeshVolatileData
             {
-                VtIntArray faceVertexCounts;
-                VtIntArray faceVertexIndices;
+                // these parameters are animated
+
                 VtVec3fArray points;
                 VtVec3fArray normals; // stored by polygon vertex
             };
@@ -87,6 +114,11 @@ namespace glm
             {
                 const EntityData* entityData = NULL;
                 mutable EntityMeshVolatileData data;
+                VtIntArray faceVertexCounts;
+                VtIntArray faceVertexIndices;
+                glm::Array<VtVec2fArray> uvSets; // stored by polygon vertex
+                SdfPathListOp materialPath;
+                std::map<TfToken, size_t, TfTokenFastArbitraryLessThan> shaderAttrIndexes;
             };
             TfHashMap<SdfPath, EntityMeshData, SdfPath::Hash> _entityMeshDataMap;
 
@@ -146,10 +178,11 @@ namespace glm
             // Helper functions for queries about property specs.
             bool _IsAnimatedProperty(const SdfPath& path) const;
             bool _HasPropertyDefaultValue(const SdfPath& path, VtValue* value) const;
+            bool _HasTargetPathValue(const SdfPath& path, VtValue* value) const;
             bool _HasPropertyTypeNameValue(const SdfPath& path, VtValue* value) const;
             bool _HasPropertyInterpolation(const SdfPath& path, VtValue* value) const;
 
-            void _ComputeEntityMeshNames(glm::Array<glm::GlmString>& meshNames, const EntityData* entityData) const;
+            void _ComputeEntityMeshNames(glm::Array<glm::GlmString>& meshNames, glm::crowdio::OutputEntityGeoData& outputData, const EntityData* entityData) const;
             void _ComputeEntity(const EntityData* entityData, double time) const;
             void _InvalidateEntity(const EntityData* entityData) const;
         };
