@@ -38,6 +38,14 @@ namespace glm
             };
         };
 
+        struct CharacterShaderData
+        {
+            std::map<size_t, size_t> _globalToIntShaderAttrIdx;
+            std::map<size_t, size_t> _globalToFloatShaderAttrIdx;
+            std::map<size_t, size_t> _globalToStringShaderAttrIdx;
+            std::map<size_t, size_t> _globalToVectorShaderAttrIdx;
+        };
+
         class GolaemUSD_DataImpl
         {
         private:
@@ -47,6 +55,10 @@ namespace glm
 
             crowdio::SimulationCacheFactory _factory;
             glm::Array<glm::PODArray<int>> _sgToSsPerChar;
+            glm::Array<CharacterShaderData> _shaderDataPerChar;
+
+            glm::Array<GlmString> _shaderAttrTypes;
+            glm::Array<VtValue> _shaderAttrDefaultValues;
 
             int _startFrame;
             int _endFrame;
@@ -75,6 +87,11 @@ namespace glm
                 glm::Array<EntityMeshData*> meshData;
                 glm::SpinLock* cachedSimulationLock;
                 glm::SpinLock _entityComputeLock; // do not allow simultaneous computes of the same entity
+
+                glm::PODArray<int> intAttrValues;
+                glm::PODArray<float> floatAttrValues;
+                glm::Array<TfToken> stringAttrValues;
+                glm::Array<GfVec3f> vectorAttrValues;
             };
 
             // cached data for each entity
@@ -82,7 +99,7 @@ namespace glm
             {
                 mutable EntityVolatileData data;
                 const glm::GolaemCharacter* character = NULL;
-                TfHashMap<SdfPath, size_t, SdfPath::Hash> meshIds;
+                int characterIdx = -1;
             };
             TfHashMap<SdfPath, EntityData, SdfPath::Hash> _entityDataMap;
 
@@ -101,6 +118,7 @@ namespace glm
                 VtIntArray faceVertexIndices;
                 glm::Array<VtVec2fArray> uvSets; // stored by polygon vertex
                 SdfPathListOp materialPath;
+                std::map<TfToken, size_t, TfTokenFastArbitraryLessThan> shaderAttrIndexes;
             };
             TfHashMap<SdfPath, EntityMeshData, SdfPath::Hash> _entityMeshDataMap;
 
