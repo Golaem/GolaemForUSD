@@ -44,6 +44,7 @@ namespace glm
     xx(int, glmDrawPercent, 100)                \
     xx(short, glmDisplayMode, 2)                \
     xx(short, glmGeoTag, 0)                     \
+    xx(TfToken, glmDirmapRules, "")             \
     xx(TfToken, glmMaterialPath, "/Materials")  \
     xx(short, glmMaterialAssignMode, 0)
         // clang-format on
@@ -66,6 +67,7 @@ namespace glm
     (glmDrawPercent)                    \
     (glmDisplayMode)                    \
     (glmGeoTag)                         \
+    (glmDirmapRules)                    \
     (glmMaterialPath)                   \
     (glmMaterialAssignMode)
         // clang-format on

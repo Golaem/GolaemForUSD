@@ -886,6 +886,8 @@ namespace glm
             glm::GlmString materialPath = _params.glmMaterialPath.GetText();
             GolaemMaterialAssignMode::Value materialAssignMode = (GolaemMaterialAssignMode::Value)_params.glmMaterialAssignMode;
 
+            glm::Array<glm::GlmString> dirmapRules = glm::stringToStringArray(_params.glmDirmapRules.GetText(), ";");
+
             GolaemDisplayMode::Value displayMode = (GolaemDisplayMode::Value)_params.glmDisplayMode;
 
             _factory.loadGolaemCharacters(characterFiles.c_str());
@@ -1106,7 +1108,7 @@ namespace glm
 
                     EntityData& entityData = _entityDataMap[entityPath];
                     entityData.data.computedTimeSample = _startFrame - 1; // ensure there will be a compute in QueryTimeSample
-                    //entityData.data.inputGeoData._dirMapRules             // left empty for now
+                    entityData.data.inputGeoData._dirMapRules = dirmapRules;
                     entityData.data.inputGeoData._entityId = entityId;
                     entityData.data.inputGeoData._entityIndex = iEntity;
                     entityData.data.inputGeoData._cachedSimulation = &cachedSimulation;
