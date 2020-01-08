@@ -890,6 +890,18 @@ namespace glm
 
             GolaemDisplayMode::Value displayMode = (GolaemDisplayMode::Value)_params.glmDisplayMode;
 
+            // dirmap character files
+            glm::Array<glm::GlmString> characterFilesList;
+            glm::GlmString correctedFilePath;
+            split(characterFiles, ";", characterFilesList);
+            for (size_t iCharFile = 0, charFileSize = characterFilesList.size(); iCharFile < charFileSize; ++iCharFile)
+            {
+                const glm::GlmString& characterFile = characterFilesList[iCharFile];
+                findDirmappedFile(correctedFilePath, characterFile, dirmapRules);
+                characterFilesList[iCharFile] = correctedFilePath;
+            }
+            characterFiles = glm::stringArrayToString(characterFilesList, ";");
+
             _factory.loadGolaemCharacters(characterFiles.c_str());
 
             glm::Array<glm::GlmString> layoutFilesArray = glm::stringToStringArray(layoutFiles, ";");
@@ -899,9 +911,11 @@ namespace glm
                 for (size_t iLayout = 0; iLayout < layoutCount; ++iLayout)
                 {
                     const glm::GlmString& layoutFile = layoutFilesArray[iLayout];
-                    if (layoutFile.length() > 0)
+                    // dirmap layout file
+                    findDirmappedFile(correctedFilePath, layoutFile, dirmapRules);
+                    if (correctedFilePath.length() > 0)
                     {
-                        _factory.loadLayoutHistoryFile(_factory.getLayoutHistoryCount(), layoutFile.c_str());
+                        _factory.loadLayoutHistoryFile(_factory.getLayoutHistoryCount(), correctedFilePath.c_str());
                     }
                 }
             }
@@ -910,17 +924,25 @@ namespace glm
             glm::crowdio::crowdTerrain::TerrainMesh* destTerrain = NULL;
             if (!srcTerrainFile.empty())
             {
-                sourceTerrain = glm::crowdio::crowdTerrain::loadTerrainAsset(srcTerrainFile.c_str());
+                // dirmap terrain file
+                findDirmappedFile(correctedFilePath, srcTerrainFile, dirmapRules);
+                sourceTerrain = glm::crowdio::crowdTerrain::loadTerrainAsset(correctedFilePath.c_str());
             }
             if (!dstTerrainFile.empty())
             {
-                destTerrain = glm::crowdio::crowdTerrain::loadTerrainAsset(dstTerrainFile.c_str());
+                // dirmap terrain file
+                findDirmappedFile(correctedFilePath, dstTerrainFile, dirmapRules);
+                destTerrain = glm::crowdio::crowdTerrain::loadTerrainAsset(correctedFilePath.c_str());
             }
             if (destTerrain == NULL)
             {
                 destTerrain = sourceTerrain;
             }
             _factory.setTerrainMeshes(sourceTerrain, destTerrain);
+
+            // dirmap cache dir
+            findDirmappedFile(correctedFilePath, cacheDir, dirmapRules);
+            cacheDir = correctedFilePath;
 
             // Layer always has a root spec that is the default prim of the layer.
             _primSpecPaths.insert(_GetRootPrimPath());
