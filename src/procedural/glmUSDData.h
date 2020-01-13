@@ -33,18 +33,17 @@ namespace glm
 #define GOLAEM_USD_DATA_PARAMS_X_FIELDS         \
     xx(TfToken, glmCacheLibFile, "")            \
     xx(TfToken, glmCacheLibItem, "")            \
-    xx(TfToken, glmCrowdFieldNames, "")         \
+    xx(TfToken, glmCrowdFields, "")			    \
     xx(TfToken, glmCacheName, "")               \
     xx(TfToken, glmCacheDir, "")                \
     xx(TfToken, glmCharacterFiles, "")          \
-    xx(TfToken, glmSourceTerrain, "")           \
-    xx(TfToken, glmDestTerrain, "")             \
     xx(bool, glmEnableLayout, true)             \
     xx(TfToken, glmLayoutFiles, "")             \
-    xx(int, glmDrawPercent, 100)                \
+	xx(TfToken, glmTerrainFile, "")             \
+    xx(float, glmRenderPercent, 100.f)          \
     xx(short, glmDisplayMode, 2)                \
-    xx(short, glmGeoTag, 0)                     \
-    xx(TfToken, glmDirmapRules, "")             \
+    xx(short, glmGeometryTag, 0)                \
+    xx(TfToken, glmDirmap, "")					\
     xx(TfToken, glmMaterialPath, "/Materials")  \
     xx(short, glmMaterialAssignMode, 0)
         // clang-format on
@@ -56,18 +55,17 @@ namespace glm
 #define GOLAEM_USD_DATA_PARAMS_TOKENS   \
     (glmCacheLibFile)                   \
     (glmCacheLibItem)                   \
-    (glmCrowdFieldNames)                \
+    (glmCrowdFields)					\
     (glmCacheName)                      \
     (glmCacheDir)                       \
     (glmCharacterFiles)                 \
-    (glmSourceTerrain)                  \
-    (glmDestTerrain)                    \
     (glmEnableLayout)                   \
     (glmLayoutFiles)                    \
-    (glmDrawPercent)                    \
+	(glmTerrainFile)                    \
+    (glmRenderPercent)                  \
     (glmDisplayMode)                    \
-    (glmGeoTag)                         \
-    (glmDirmapRules)                    \
+    (glmGeometryTag)                    \
+    (glmDirmap)							\
     (glmMaterialPath)                   \
     (glmMaterialAssignMode)
         // clang-format on

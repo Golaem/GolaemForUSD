@@ -815,13 +815,9 @@ namespace glm
         {
             _startFrame = 0;
             _endFrame = -1;
-            if (_params.glmCacheLibFile.IsEmpty() || _params.glmCacheLibItem.IsEmpty())
-            {
-                return;
-            }
 
             glm::GlmString correctedFilePath;
-            glm::Array<glm::GlmString> dirmapRules = glm::stringToStringArray(_params.glmDirmapRules.GetText(), ";");
+            glm::Array<glm::GlmString> dirmapRules = glm::stringToStringArray(_params.glmDirmap.GetText(), ";");
 
             glm::crowdio::SimulationCacheLibrary simuCacheLibrary;
             findDirmappedFile(correctedFilePath, _params.glmCacheLibFile.GetText(), dirmapRules);
@@ -839,26 +835,25 @@ namespace glm
             glm::crowdio::SimulationCacheInformation* cacheInfo = simuCacheLibrary.getCacheInformationByItemName(_params.glmCacheLibItem.GetText());
             if (cacheInfo == NULL && simuCacheLibrary.getCacheInformationCount() > 0)
             {
-                GLM_CROWD_TRACE_WARNING("Could not find simulation cache item '"
-                                        << _params.glmCacheLibItem.GetText() << "' in library file '" << _params.glmCacheLibFile.GetText() << "'");
+                GLM_CROWD_TRACE_WARNING("Could not find simulation cache item '" << _params.glmCacheLibItem.GetText() << "' in library file '" << _params.glmCacheLibFile.GetText() << "'");
                 cacheInfo = &simuCacheLibrary.getCacheInformation(0);
             }
+			
             if (cacheInfo != NULL)
             {
                 cfNames = cacheInfo->_crowdFields;
                 cacheName = cacheInfo->_cacheName;
                 cacheDir = cacheInfo->_cacheDir;
                 characterFiles = cacheInfo->_characterFiles;
-                srcTerrainFile = cacheInfo->_srcTerrain;
                 dstTerrainFile = cacheInfo->_destTerrain;
                 enableLayout = cacheInfo->_enableLayout;
                 layoutFiles = cacheInfo->_layoutFile;
                 layoutFiles.trim(";");
             }
             // override cacheInfo params if neeeded
-            if (!_params.glmCrowdFieldNames.IsEmpty())
+            if (!_params.glmCrowdFields.IsEmpty())
             {
-                cfNames = _params.glmCrowdFieldNames.GetText();
+                cfNames = _params.glmCrowdFields.GetText();
             }
             if (!_params.glmCacheName.IsEmpty())
             {
@@ -872,13 +867,9 @@ namespace glm
             {
                 characterFiles = _params.glmCharacterFiles.GetText();
             }
-            if (!_params.glmSourceTerrain.IsEmpty())
+            if (!_params.glmTerrainFile.IsEmpty())
             {
-                srcTerrainFile = _params.glmSourceTerrain.GetText();
-            }
-            if (!_params.glmDestTerrain.IsEmpty())
-            {
-                dstTerrainFile = _params.glmDestTerrain.GetText();
+                dstTerrainFile = _params.glmTerrainFile.GetText();
             }
             enableLayout = enableLayout && _params.glmEnableLayout;
             if (!_params.glmLayoutFiles.IsEmpty())
@@ -886,9 +877,14 @@ namespace glm
                 layoutFiles = _params.glmLayoutFiles.GetText();
             }
 
-            float renderPercent = _params.glmDrawPercent * 0.01f;
-            short geoTag = _params.glmGeoTag;
+            float renderPercent = _params.glmRenderPercent * 0.01f;
+            short geoTag = _params.glmGeometryTag;
 
+			// terrain file
+			glm::Array<glm::GlmString> crowdFieldNames = glm::stringToStringArray(cfNames.c_str(), ";");
+			if (crowdFieldNames.size())
+				srcTerrainFile = cacheDir + "/" + cacheName + "." + crowdFieldNames[0] + ".terrain.gtg";
+		
             glm::GlmString materialPath = _params.glmMaterialPath.GetText();
             GolaemMaterialAssignMode::Value materialAssignMode = (GolaemMaterialAssignMode::Value)_params.glmMaterialAssignMode;
 
@@ -952,7 +948,6 @@ namespace glm
             std::vector<TfToken>& rootChildNames = _primChildNames[_GetRootPrimPath()];
 
             bool framesFound = false;
-            glm::Array<glm::GlmString> crowdFieldNames = glm::stringToStringArray(cfNames.c_str(), ";");
             for (size_t iCf = 0, cfCount = crowdFieldNames.size(); iCf < cfCount; ++iCf)
             {
                 const glm::GlmString& cfName = crowdFieldNames[iCf];
