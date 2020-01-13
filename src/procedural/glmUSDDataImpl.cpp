@@ -805,7 +805,9 @@ namespace glm
         //-----------------------------------------------------------------------------
         glm::GlmString sanitizePrimName(const glm::GlmString& meshName)
         {
-            return glm::replaceString(meshName, ":", "_");
+            glm::GlmString validMeshName = glm::replaceString(meshName, ":", "_");
+            validMeshName = glm::replaceString(validMeshName, "|", "_");
+            return validMeshName;
         }
 
         //-----------------------------------------------------------------------------
@@ -818,8 +820,12 @@ namespace glm
                 return;
             }
 
+            glm::GlmString correctedFilePath;
+            glm::Array<glm::GlmString> dirmapRules = glm::stringToStringArray(_params.glmDirmapRules.GetText(), ";");
+
             glm::crowdio::SimulationCacheLibrary simuCacheLibrary;
-            loadSimulationCacheLib(simuCacheLibrary, _params.glmCacheLibFile.GetText());
+            findDirmappedFile(correctedFilePath, _params.glmCacheLibFile.GetText(), dirmapRules);
+            loadSimulationCacheLib(simuCacheLibrary, correctedFilePath);
 
             glm::GlmString cfNames;
             glm::GlmString cacheName;
@@ -886,13 +892,10 @@ namespace glm
             glm::GlmString materialPath = _params.glmMaterialPath.GetText();
             GolaemMaterialAssignMode::Value materialAssignMode = (GolaemMaterialAssignMode::Value)_params.glmMaterialAssignMode;
 
-            glm::Array<glm::GlmString> dirmapRules = glm::stringToStringArray(_params.glmDirmapRules.GetText(), ";");
-
             GolaemDisplayMode::Value displayMode = (GolaemDisplayMode::Value)_params.glmDisplayMode;
 
             // dirmap character files
             glm::Array<glm::GlmString> characterFilesList;
-            glm::GlmString correctedFilePath;
             split(characterFiles, ";", characterFilesList);
             for (size_t iCharFile = 0, charFileSize = characterFilesList.size(); iCharFile < charFileSize; ++iCharFile)
             {
