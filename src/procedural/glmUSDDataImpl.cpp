@@ -871,7 +871,7 @@ namespace glm
             {
                 dstTerrainFile = _params.glmTerrainFile.GetText();
             }
-            enableLayout = enableLayout && _params.glmEnableLayout;
+            enableLayout = _params.glmEnableLayout;
             if (!_params.glmLayoutFiles.IsEmpty())
             {
                 layoutFiles = _params.glmLayoutFiles.GetText();
