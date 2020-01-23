@@ -55,8 +55,8 @@ if(BUILD_USD_HOUDINI)
                 ${_houdini_hfs_root}/dsolib/libgusd.so
             )
         else ()
-            target_link_libraries( ${library_name}
-                Houdini			# Standard Houdini libraries
+            target_link_libraries( ${PROJECT_NAME}
+                Houdini			        # Standard Houdini libraries
             )
         endif ()
     endif()
