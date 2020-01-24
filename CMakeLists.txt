@@ -63,7 +63,7 @@ if(BUILD_USD_HOUDINI)
 
      
 else()
-    target_link_libraries( ${PROJECT_NAME} usd usdGeom)
+    target_link_libraries( ${PROJECT_NAME} usd)
 endif()
 
 # cannot compile debug - windows or linux
