@@ -9,7 +9,6 @@
 USD_INCLUDES_START
 #include <pxr/pxr.h>
 #include <pxr/usd/sdf/schema.h>
-#include <pxr/usd/usdGeom/tokens.h>
 USD_INCLUDES_END
 
 #include <glmCore.h>
@@ -38,6 +37,15 @@ namespace glm
 #endif
         // clang-format off
         // Define tokens for the property names we know about from usdGeom
+
+        TF_DEFINE_PRIVATE_TOKENS(
+            _geomCommonTokens,      
+            (inherited)             
+            (faceVarying)           
+            (rightHanded)           
+            (none)                   
+            (interpolation)        
+            (invisible));
 
         TF_DEFINE_PRIVATE_TOKENS(
             _entityPropertyTokens,
@@ -105,7 +113,7 @@ namespace glm
             (*_entityProperties)[_entityPropertyTokens->displayColor].defaultValue = VtValue(VtVec3fArray({GfVec3f(1, 0.5, 0)}));
             (*_entityProperties)[_entityPropertyTokens->displayColor].isAnimated = false;
 
-            (*_entityProperties)[_entityPropertyTokens->visibility].defaultValue = VtValue(UsdGeomTokens->inherited);
+            (*_entityProperties)[_entityPropertyTokens->visibility].defaultValue = VtValue(_geomCommonTokens->inherited);
 
             (*_entityProperties)[_entityPropertyTokens->entityId].defaultValue = VtValue(int64_t(-1));
             (*_entityProperties)[_entityPropertyTokens->entityId].isAnimated = false;
@@ -127,10 +135,10 @@ namespace glm
 
             (*_entityMeshProperties)[_entityMeshPropertyTokens->normals].defaultValue = VtValue(VtVec3fArray());
             (*_entityMeshProperties)[_entityMeshPropertyTokens->normals].hasInterpolation = true;
-            (*_entityMeshProperties)[_entityMeshPropertyTokens->normals].interpolation = UsdGeomTokens->faceVarying;
+            (*_entityMeshProperties)[_entityMeshPropertyTokens->normals].interpolation = _geomCommonTokens->faceVarying;
 
             // set the subdivision scheme to none in order to take normals into account
-            (*_entityMeshProperties)[_entityMeshPropertyTokens->subdivisionScheme].defaultValue = UsdGeomTokens->none;
+            (*_entityMeshProperties)[_entityMeshPropertyTokens->subdivisionScheme].defaultValue = _geomCommonTokens->none;
             (*_entityMeshProperties)[_entityMeshPropertyTokens->subdivisionScheme].isAnimated = false;
 
             (*_entityMeshProperties)[_entityMeshPropertyTokens->faceVertexCounts].defaultValue = VtValue(VtIntArray());
@@ -141,9 +149,9 @@ namespace glm
             (*_entityMeshProperties)[_entityMeshPropertyTokens->uvs].defaultValue = VtValue(VtVec2fArray());
             (*_entityMeshProperties)[_entityMeshPropertyTokens->uvs].isAnimated = false;
             (*_entityMeshProperties)[_entityMeshPropertyTokens->uvs].hasInterpolation = true;
-            (*_entityMeshProperties)[_entityMeshPropertyTokens->uvs].interpolation = UsdGeomTokens->faceVarying;
+            (*_entityMeshProperties)[_entityMeshPropertyTokens->uvs].interpolation = _geomCommonTokens->faceVarying;
 
-            (*_entityMeshProperties)[_entityMeshPropertyTokens->orientation].defaultValue = VtValue(TfToken("rightHanded"));
+            (*_entityMeshProperties)[_entityMeshPropertyTokens->orientation].defaultValue = VtValue(_geomCommonTokens->rightHanded);
             (*_entityMeshProperties)[_entityMeshPropertyTokens->orientation].isAnimated = false;
 
             // Use the schema to derive the type name tokens from each property's
@@ -288,7 +296,7 @@ namespace glm
                 {
                     return _HasPropertyDefaultValue(path, value);
                 }
-                else if (field == UsdGeomTokens->interpolation)
+                else if (field == _geomCommonTokens->interpolation)
                 {
                     return _HasPropertyInterpolation(path, value);
                 }
@@ -519,7 +527,7 @@ namespace glm
                                     {SdfFieldKeys->TypeName,
                                      SdfFieldKeys->Default,
                                      SdfFieldKeys->TimeSamples,
-                                     UsdGeomTokens->interpolation});
+                                     _geomCommonTokens->interpolation});
                                 return animInterpPropFields;
                             }
                             return animPropFields;
@@ -531,7 +539,7 @@ namespace glm
                                 static std::vector<TfToken> nonAnimInterpPropFields(
                                     {SdfFieldKeys->TypeName,
                                      SdfFieldKeys->Default,
-                                     UsdGeomTokens->interpolation});
+                                     _geomCommonTokens->interpolation});
                                 return nonAnimInterpPropFields;
                             }
                             return nonAnimPropFields;
@@ -708,7 +716,7 @@ namespace glm
                 }
                 if (nameToken == _entityPropertyTokens->visibility)
                 {
-                    RETURN_TRUE_WITH_OPTIONAL_VALUE(entityData->data.enabled ? UsdGeomTokens->inherited : UsdGeomTokens->invisible);
+                    RETURN_TRUE_WITH_OPTIONAL_VALUE(entityData->data.enabled ? _geomCommonTokens->inherited : _geomCommonTokens->invisible);
                 }
             }
             else
@@ -838,7 +846,7 @@ namespace glm
                 GLM_CROWD_TRACE_WARNING("Could not find simulation cache item '" << _params.glmCacheLibItem.GetText() << "' in library file '" << _params.glmCacheLibFile.GetText() << "'");
                 cacheInfo = &simuCacheLibrary.getCacheInformation(0);
             }
-			
+
             if (cacheInfo != NULL)
             {
                 cfNames = cacheInfo->_crowdFields;
@@ -880,11 +888,11 @@ namespace glm
             float renderPercent = _params.glmRenderPercent * 0.01f;
             short geoTag = _params.glmGeometryTag;
 
-			// terrain file
-			glm::Array<glm::GlmString> crowdFieldNames = glm::stringToStringArray(cfNames.c_str(), ";");
-			if (crowdFieldNames.size())
-				srcTerrainFile = cacheDir + "/" + cacheName + "." + crowdFieldNames[0] + ".terrain.gtg";
-		
+            // terrain file
+            glm::Array<glm::GlmString> crowdFieldNames = glm::stringToStringArray(cfNames.c_str(), ";");
+            if (crowdFieldNames.size())
+                srcTerrainFile = cacheDir + "/" + cacheName + "." + crowdFieldNames[0] + ".terrain.gtg";
+
             glm::GlmString materialPath = _params.glmMaterialPath.GetText();
             GolaemMaterialAssignMode::Value materialAssignMode = (GolaemMaterialAssignMode::Value)_params.glmMaterialAssignMode;
 
@@ -1674,7 +1682,7 @@ namespace glm
                         }
                         else if (nameToken == _entityPropertyTokens->visibility)
                         {
-                            *value = VtValue(entityData->data.enabled ? UsdGeomTokens->inherited : UsdGeomTokens->invisible);
+                            *value = VtValue(entityData->data.enabled ? _geomCommonTokens->inherited : _geomCommonTokens->invisible);
                         }
                         else if (nameToken == _entityPropertyTokens->entityId)
                         {
