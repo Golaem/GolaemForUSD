@@ -6,6 +6,11 @@ cmake_minimum_required(VERSION 3.13)
 
 project(${TARGET_GOLAEMUSD})
 
+if( CMAKE_COMPILER_IS_GNUCC )
+    # flags needed for some usd includes (that use hash_set)
+    add_flag_definitions( "CXX_FLAGS" "-Wno-deprecated")
+endif()
+
 # List Files
 list_files( "src" "h;cpp" )
 list_files( "src/procedural" "h;cpp;json" )
@@ -17,7 +22,49 @@ add_library( ${PROJECT_NAME} SHARED ${LIST_FILES} )
 
 set_target_properties( ${PROJECT_NAME} PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD_DEBUG ON )
 
-target_link_libraries( ${PROJECT_NAME} usd usdGeom)
+if(BUILD_USD_HOUDINI)
+    # from Houdini toolkit/samples/USD/CMakeLists.txt
+    if(MSVC)
+        target_link_libraries( ${PROJECT_NAME}
+            Houdini # Standard Houdini libraries
+            ${_houdini_hfs_root}/custom/houdini/dsolib/libgusd.lib
+            ${_houdini_hfs_root}/custom/houdini/dsolib/libpxr_ar.lib
+            ${_houdini_hfs_root}/custom/houdini/dsolib/libpxr_arch.lib
+            ${_houdini_hfs_root}/custom/houdini/dsolib/libpxr_gf.lib
+            ${_houdini_hfs_root}/custom/houdini/dsolib/libpxr_js.lib
+            ${_houdini_hfs_root}/custom/houdini/dsolib/libpxr_kind.lib
+            ${_houdini_hfs_root}/custom/houdini/dsolib/libpxr_pcp.lib
+            ${_houdini_hfs_root}/custom/houdini/dsolib/libpxr_plug.lib
+            ${_houdini_hfs_root}/custom/houdini/dsolib/libpxr_sdf.lib
+            ${_houdini_hfs_root}/custom/houdini/dsolib/libpxr_tf.lib
+            ${_houdini_hfs_root}/custom/houdini/dsolib/libpxr_usd.lib
+            ${_houdini_hfs_root}/custom/houdini/dsolib/libpxr_usdGeom.lib
+            ${_houdini_hfs_root}/custom/houdini/dsolib/libpxr_usdRi.lib
+            ${_houdini_hfs_root}/custom/houdini/dsolib/libpxr_usdShade.lib
+            ${_houdini_hfs_root}/custom/houdini/dsolib/libpxr_usdUtils.lib
+            ${_houdini_hfs_root}/custom/houdini/dsolib/libpxr_vt.lib
+            ${_houdini_hfs_root}/custom/houdini/dsolib/libpxr_work.lib
+            ${_houdini_hfs_root}/custom/houdini/dsolib/hboost_python-mt.lib
+            ${PYTHON_LIBRARY}
+        )
+    else()
+        # Link against Houdini libraries (including USD)
+        if ( DEFINED ENV{HOUDINI_HDK_LINK_GUSD} )
+            target_link_libraries( ${PROJECT_NAME}
+                Houdini					# Standard Houdini libraries
+                ${_houdini_hfs_root}/dsolib/libgusd.so
+            )
+        else ()
+            target_link_libraries( ${PROJECT_NAME}
+                Houdini			        # Standard Houdini libraries
+            )
+        endif ()
+    endif()
+
+     
+else()
+    target_link_libraries( ${PROJECT_NAME} usd usdGeom)
+endif()
 
 # cannot compile debug - windows or linux
 set( CROWD_INSTALL_SKIP_DEBUG ON )
