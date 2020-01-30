@@ -45,7 +45,8 @@ namespace glm
     xx(short, glmGeometryTag, 0)                \
     xx(TfToken, glmDirmap, "")					\
     xx(TfToken, glmMaterialPath, "/Materials")  \
-    xx(short, glmMaterialAssignMode, 0)
+    xx(short, glmMaterialAssignMode, 0)         \
+    xx(TfToken, glmAttributeNamespace, "")
         // clang-format on
 
         // A token of the same name must be defined for each parameter in the macro
@@ -67,7 +68,8 @@ namespace glm
     (glmGeometryTag)                    \
     (glmDirmap)							\
     (glmMaterialPath)                   \
-    (glmMaterialAssignMode)
+    (glmMaterialAssignMode)             \
+    (glmAttributeNamespace)
         // clang-format on
 
 #ifdef _MSC_VER

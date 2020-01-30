@@ -60,6 +60,9 @@ namespace glm
             glm::Array<GlmString> _shaderAttrTypes;
             glm::Array<VtValue> _shaderAttrDefaultValues;
 
+            glm::Array<GlmString> _ppAttrTypes;
+            glm::Array<VtValue> _ppAttrDefaultValues;
+
             int _startFrame;
             int _endFrame;
 
@@ -88,10 +91,13 @@ namespace glm
                 glm::SpinLock* cachedSimulationLock;
                 glm::SpinLock _entityComputeLock; // do not allow simultaneous computes of the same entity
 
-                glm::PODArray<int> intAttrValues;
-                glm::PODArray<float> floatAttrValues;
-                glm::Array<TfToken> stringAttrValues;
-                glm::Array<GfVec3f> vectorAttrValues;
+                glm::PODArray<int> intShaderAttrValues;
+                glm::PODArray<float> floatShaderAttrValues;
+                glm::Array<TfToken> stringShaderAttrValues;
+                glm::Array<GfVec3f> vectorShaderAttrValues;
+
+                glm::PODArray<float> floatPPAttrValues;
+                glm::Array<GfVec3f> vectorPPAttrValues;
             };
 
             // cached data for each entity
@@ -100,6 +106,7 @@ namespace glm
                 mutable EntityVolatileData data;
                 const glm::GolaemCharacter* character = NULL;
                 int characterIdx = -1;
+                std::map<TfToken, size_t, TfTokenFastArbitraryLessThan> ppAttrIndexes;
             };
             TfHashMap<SdfPath, EntityData, SdfPath::Hash> _entityDataMap;
 
