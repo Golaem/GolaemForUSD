@@ -81,7 +81,7 @@ crowd_load_dependencies( ${PROJECT_NAME} )
 
 if( CMAKE_COMPILER_IS_GNUCC )
     # flags needed for some usd includes (that use hash_set)
-    target_compile_options(${PROJECT_NAME} PUBLIC "-Wno-deprecated")
+    target_compile_options(${PROJECT_NAME} PRIVATE "-Wno-deprecated")
 endif()
 
 set_target_prefix( ${PROJECT_NAME} PLUGIN )
