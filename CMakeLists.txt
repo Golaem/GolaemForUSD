@@ -6,11 +6,6 @@ cmake_minimum_required(VERSION 3.13)
 
 project(${TARGET_GOLAEMUSD})
 
-if( CMAKE_COMPILER_IS_GNUCC )
-    # flags needed for some usd includes (that use hash_set)
-    add_flag_definitions( "CXX_FLAGS" "-Wno-deprecated")
-endif()
-
 # List Files
 list_files( "src" "h;cpp" )
 list_files( "src/procedural" "h;cpp;json" )
@@ -60,8 +55,16 @@ if(BUILD_USD_HOUDINI)
             )
         endif ()
     endif()
-
-     
+elseif(BUILD_USD_KATANA)
+    target_link_libraries(${PROJECT_NAME} 
+        arch
+        gf
+        pcp
+        sdf
+        tf
+        usd
+        vt
+    )
 else()
     target_link_libraries( ${PROJECT_NAME} usd)
 endif()
@@ -75,6 +78,12 @@ crowd_label_project( ${PROJECT_NAME} )
 set_target_properties( ${PROJECT_NAME} PROPERTIES PROJECT_LABEL ${CUSTOM_PROJECT_LABEL} )
 
 crowd_load_dependencies( ${PROJECT_NAME} )
+
+if( CMAKE_COMPILER_IS_GNUCC )
+    # flags needed for some usd includes (that use hash_set)
+    target_compile_options(${PROJECT_NAME} PRIVATE "-Wno-deprecated")
+endif()
+
 set_target_prefix( ${PROJECT_NAME} PLUGIN )
 set_target_postfix( ${PROJECT_NAME} PLUGIN )
 
@@ -90,7 +99,6 @@ file( READ "${CMAKE_CURRENT_SOURCE_DIR}/src/procedural/plugInfo.json" PLUGININFO
 # get_target_property(_baseName ${PROJECT_NAME} LOCATION_<CONFIG>)
 string( REPLACE "@GOLAEMUSD_LIBRARY_PATH@" "GolaemUSD_d${CMAKE_SHARED_LIBRARY_SUFFIX}" PLUGININFO_PATH_CONTENTS_Debug ${PLUGININFO_PATH_CONTENTS} )
 string( REPLACE "@GOLAEMUSD_LIBRARY_PATH@" "GolaemUSD${CMAKE_SHARED_LIBRARY_SUFFIX}" PLUGININFO_PATH_CONTENTS_Release ${PLUGININFO_PATH_CONTENTS} )
-
 
 foreach( configuration "Debug" "Release" )
     set( PLUGININFO_PATH_${configuration} "${CMAKE_BINARY_DIR}/${configuration}/plugInfo.json" )
