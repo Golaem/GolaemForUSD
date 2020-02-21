@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
 
-option (GOLAEMUSD_STANDALONE_BUILD "Standalone build: ON/OFF" OFF)
+option (GOLAEMUSD_STANDALONE_BUILD "Standalone build: ON/OFF" ON)
 
 ############################################################
 # BEGIN Project
@@ -8,38 +8,64 @@ option (GOLAEMUSD_STANDALONE_BUILD "Standalone build: ON/OFF" OFF)
 
 # Stand Alone
 if(GOLAEMUSD_STANDALONE_BUILD)
+    ############################################################
+	# BEGIN Declare various macros
+	############################################################
+	macro( list_files FOLDER_NAME FILE_EXTENSIONS )
+        set( SKIP_INCLUDE_DIR OFF )
+        if( ( ${ARGC} GREATER 2 ) AND ( NOT "${ARGV2}" STREQUAL "" ) )
+            set( DIRECTORY_REFERENCE "${ARGV2}/${FOLDER_NAME}" )
+            if( ( ${ARGC} GREATER 3 ) AND ( "${ARGV3}" STREQUAL "SKIP_INCLUDE_DIR" ) )
+                set( SKIP_INCLUDE_DIR ON )
+            endif()
+        else()
+            set( DIRECTORY_REFERENCE "${CMAKE_CURRENT_SOURCE_DIR}/${FOLDER_NAME}" )
+        endif()
+        if( EXISTS ${DIRECTORY_REFERENCE} )
+            if( NOT SKIP_INCLUDE_DIR )
+                include_directories( ${DIRECTORY_REFERENCE} )
+            endif()
+            if( "${FOLDER_NAME}" STREQUAL "." )
+                set( DIRECTORY_FILTER "Source Files" )
+                set( DIRECTORY_LABEL "ROOT" )
+            else()
+                set( DIRECTORY_FILTER "Source Files/${FOLDER_NAME}" )
+                string( REGEX REPLACE "/\\." "" DIRECTORY_FILTER ${DIRECTORY_FILTER} )
+                string( REGEX REPLACE "\\./" "" DIRECTORY_FILTER ${DIRECTORY_FILTER} )
+                string( REGEX REPLACE "/" "\\\\\\\\" DIRECTORY_FILTER ${DIRECTORY_FILTER} )
+                set( DIRECTORY_LABEL "${FOLDER_NAME}" )
+                string( REGEX REPLACE "/\\." "" DIRECTORY_LABEL ${DIRECTORY_LABEL} )
+                string( REGEX REPLACE "\\./" "" DIRECTORY_LABEL ${DIRECTORY_LABEL} )
+                string( REGEX REPLACE "/" "_" DIRECTORY_LABEL ${DIRECTORY_LABEL} )
+                string( TOUPPER "${DIRECTORY_LABEL}" DIRECTORY_LABEL )
+            endif()
+            foreach( file_ext ${FILE_EXTENSIONS} )
+                string( TOUPPER "${file_ext}" _FILE_EXT )
+                unset( LIST_FILES_${DIRECTORY_LABEL}_${_FILE_EXT} )
+                file( GLOB LIST_FILES_${DIRECTORY_LABEL}_${_FILE_EXT} ${DIRECTORY_REFERENCE}/*.${file_ext} )
+                list( APPEND LIST_FILES "${LIST_FILES_${DIRECTORY_LABEL}_${_FILE_EXT}}" )
+                list( APPEND LIST_FILES_${_FILE_EXT} "${LIST_FILES_${DIRECTORY_LABEL}_${_FILE_EXT}}" )
+                source_group( "${DIRECTORY_FILTER}" FILES ${LIST_FILES_${DIRECTORY_LABEL}_${_FILE_EXT}} )
+                # unset( LIST_FILES_${DIRECTORY_LABEL}_${_FILE_EXT} )
+            endforeach()
+        else()
+        endif()
+    endmacro()
+    ############################################################
+    # END Declare various macros
+    ############################################################
+
     project(GolaemUSD)
 
-    set( CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cfg/cmake")
-    include( GolaemMacros )
-
-    # Versioning
-    set( GLM_VERSION_PRODUCT "7" )
-    set( GLM_VERSION_MAJOR "2" )
-    set( GLM_VERSION_MINOR "2" )
-    set( GLM_VERSION_PATCH "0" )
-    set( GLM_RELEASE_DATE "2020/02/07" )
-    get_release_label( "${GLM_VERSION_PRODUCT}.${GLM_VERSION_MAJOR}.${GLM_VERSION_MINOR}.${GLM_VERSION_PATCH}" GLM_RELEASE_LABEL )
-    if( EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.gitversion" )
-        file( READ "${CMAKE_CURRENT_SOURCE_DIR}/.gitversion" GLM_RELEASE_COMMIT )
-        string( REPLACE "\n" "" GLM_RELEASE_COMMIT "${GLM_RELEASE_COMMIT}" )
-        string( TIMESTAMP GLM_RELEASE_DATE "%Y/%m/%d" )
-        set( GLM_RELEASE_LABEL "${GLM_RELEASE_LABEL}[${GLM_RELEASE_COMMIT}]-${GLM_RELEASE_DATE}" )
-        string( REPLACE "#" "PR" GLM_RELEASE_LABEL "${GLM_RELEASE_LABEL}" )
-    else()
-        unset( GLM_RELEASE_COMMIT )
-    endif()
-    add_definitions( -DGLM_RELEASE_DATE=\"${GLM_RELEASE_DATE}\" )
-    add_definitions( -DGLM_RELEASE_LABEL=\"${GLM_RELEASE_LABEL}\" )
-    add_definitions( -DGLM_VERSION_PRODUCT=${GLM_VERSION_PRODUCT} )
-    add_definitions( -DGLM_VERSION_MAJOR=${GLM_VERSION_MAJOR} )
-    add_definitions( -DGLM_VERSION_MINOR=${GLM_VERSION_MINOR} )
-    add_definitions( -DGLM_VERSION_PATCH=${GLM_VERSION_PATCH} )
-    set( GLM_CROWD_URL_MAIN "http://www.golaem.com" )
-    set( GLM_CROWD_URL_DOC "http://help.golaem.com" )
-    set( GLM_CROWD_EMAIL_SUPPORT "http://support.golaem.com" )
-
     # Add dependencies
+    if(MSVC)
+        # set this for FindFbxSdk
+        set(BUILD_COMPILER_VERSION "vc140")
+        set(BUILD_ARCHITECTURE_VERSION "x64")
+    endif()
+
+    set( CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cfg/cmake")
+    
     find_package(Python REQUIRED)
     find_package(FbxSdk REQUIRED)
     find_package(USD REQUIRED)
@@ -76,8 +102,10 @@ if(GOLAEMUSD_STANDALONE_BUILD)
     # cannot compile debug - windows or linux 
     set( CROWD_INSTALL_SKIP_DEBUG ON )
 
-    # flags needed for some usd includes (that use hash_set)
-    if( CMAKE_COMPILER_IS_GNUCC ) 
+    if(MSVC)
+        target_compile_options(${PROJECT_NAME} PRIVATE "-DNOMINMAX" "/MP" "/nologo" "/wd4251")
+    else()
+        # flags needed for some usd includes (that use hash_set)
         target_compile_options(${PROJECT_NAME} PRIVATE "-Wno-deprecated")
     endif()
 
