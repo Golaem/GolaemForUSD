@@ -8,6 +8,7 @@
 #include "glmUSDPluginVersion.h"
 
 #include <glmProductInformation.h>
+#include <glmCrowdIO.h>
 
 namespace glm
 {
@@ -16,15 +17,17 @@ namespace glm
         //-------------------------------------------------------------------------
         const ProductInformation& getProductInformation()
         {
+            unsigned int glmAPIVersion[4];
+            crowdio::getGolaemAPIVersion(glmAPIVersion);
             static ProductInformation glmProductInformation(
                 GLM_USDPLUGIN_NAME,
                 GLM_USDPLUGIN_DESCRIPTION,
-                GLM_USDPLUGIN_MAJORVERSION,
-                GLM_USDPLUGIN_MINORVERSION,
-                GLM_USDPLUGIN_PATCHVERSION,
-                GLM_USDPLUGIN_BRANCHVERSION,
-                GLM_USDPLUGIN_RELEASE_LABEL,
-                GLM_USDPLUGIN_RELEASE_DATE);
+                glmAPIVersion[crowdio::GolaemVersion::MAIN_VERSION],
+                glmAPIVersion[crowdio::GolaemVersion::MAJOR_VERSION],
+                glmAPIVersion[crowdio::GolaemVersion::MINOR_VERSION],
+                glmAPIVersion[crowdio::GolaemVersion::PATCH_VERSION],
+                crowdio::getGolaemReleaseLabel().c_str(),
+                crowdio::getGolaemReleaseDate().c_str());
             return glmProductInformation;
         }
     } // namespace usdplugin
