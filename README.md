@@ -11,10 +11,10 @@ Golaem For USD source code is released under the [GNU Lesser General Public Lice
 
 ###
 ## Prerequisites
-- [Golaem 7.2.1 For Maya (or above)](http://download.golaem.com)
+- [Golaem 7.2.3 For Maya (or above)](http://download.golaem.com)
 - USD 0.19.11
 - FBX SDK 2019.0
-> Please use the same version of Golaem For Maya than the Golaem For USD tag you're compiling
+> Please use the same version of Golaem For Maya as the Golaem For USD tag you're compiling
 
 ###
 ## Documentation
