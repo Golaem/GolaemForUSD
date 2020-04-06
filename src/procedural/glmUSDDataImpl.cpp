@@ -213,6 +213,7 @@ namespace glm
         //-----------------------------------------------------------------------------
         GolaemUSD_DataImpl::GolaemUSD_DataImpl(const GolaemUSD_DataParams& params)
             : _params(params)
+            , _factory(new crowdio::SimulationCacheFactory())
         {
             usdplugin::init();
             _InitFromParams();
@@ -221,6 +222,7 @@ namespace glm
         //-----------------------------------------------------------------------------
         GolaemUSD_DataImpl::~GolaemUSD_DataImpl()
         {
+            delete _factory;
             usdplugin::finish();
         }
 
@@ -999,7 +1001,7 @@ namespace glm
             }
             characterFiles = glm::stringArrayToString(characterFilesList, ";");
 
-            _factory.loadGolaemCharacters(characterFiles.c_str());
+            _factory->loadGolaemCharacters(characterFiles.c_str());
 
             glm::Array<glm::GlmString> layoutFilesArray = glm::stringToStringArray(layoutFiles, ";");
             size_t layoutCount = layoutFilesArray.size();
@@ -1012,7 +1014,7 @@ namespace glm
                     findDirmappedFile(correctedFilePath, layoutFile, dirmapRules);
                     if (correctedFilePath.length() > 0)
                     {
-                        _factory.loadLayoutHistoryFile(_factory.getLayoutHistoryCount(), correctedFilePath.c_str());
+                        _factory->loadLayoutHistoryFile(_factory->getLayoutHistoryCount(), correctedFilePath.c_str());
                     }
                 }
             }
@@ -1035,7 +1037,7 @@ namespace glm
             {
                 destTerrain = sourceTerrain;
             }
-            _factory.setTerrainMeshes(sourceTerrain, destTerrain);
+            _factory->setTerrainMeshes(sourceTerrain, destTerrain);
 
             // dirmap cache dir
             findDirmappedFile(correctedFilePath, cacheDir, dirmapRules);
@@ -1054,7 +1056,7 @@ namespace glm
                     continue;
                 }
 
-                glm::crowdio::CachedSimulation& cachedSimulation = _factory.getCachedSimulation(cacheDir.c_str(), cacheName.c_str(), cfName.c_str());
+                glm::crowdio::CachedSimulation& cachedSimulation = _factory->getCachedSimulation(cacheDir.c_str(), cacheName.c_str(), cfName.c_str());
 
                 const glm::crowdio::GlmSimulationData* simuData = cachedSimulation.getFinalSimulationData();
 
@@ -1080,8 +1082,8 @@ namespace glm
                 }
             }
 
-            _sgToSsPerChar.resize(_factory.getGolaemCharacters().size());
-            _shaderDataPerChar.resize(_factory.getGolaemCharacters().size());
+            _sgToSsPerChar.resize(_factory->getGolaemCharacters().size());
+            _shaderDataPerChar.resize(_factory->getGolaemCharacters().size());
             _shaderAttrTypes.resize(ShaderAttributeType::END);
             _shaderAttrDefaultValues.resize(ShaderAttributeType::END);
             {
@@ -1125,11 +1127,11 @@ namespace glm
                 _ppAttrTypes[attrTypeIdx] = SdfSchema::GetInstance().FindType(value).GetAsToken();
                 _ppAttrDefaultValues[attrTypeIdx] = value;
             }
-            for (int iChar = 0, charCount = _factory.getGolaemCharacters().sizeInt(); iChar < charCount; ++iChar)
+            for (int iChar = 0, charCount = _factory->getGolaemCharacters().sizeInt(); iChar < charCount; ++iChar)
             {
                 glm::PODArray<int>& shadingGroupToSurfaceShader = _sgToSsPerChar[iChar];
                 shadingGroupToSurfaceShader.clear();
-                const glm::GolaemCharacter* character = _factory.getGolaemCharacter(iChar);
+                const glm::GolaemCharacter* character = _factory->getGolaemCharacter(iChar);
                 if (character == NULL)
                 {
                     continue;
@@ -1207,7 +1209,7 @@ namespace glm
 
                 std::vector<TfToken>& cfChildNames = _primChildNames[cfPath];
 
-                glm::crowdio::CachedSimulation& cachedSimulation = _factory.getCachedSimulation(cacheDir.c_str(), cacheName.c_str(), cfName.c_str());
+                glm::crowdio::CachedSimulation& cachedSimulation = _factory->getCachedSimulation(cacheDir.c_str(), cacheName.c_str(), cfName.c_str());
 
                 const glm::crowdio::GlmSimulationData* simuData = cachedSimulation.getFinalSimulationData();
 
@@ -1222,7 +1224,7 @@ namespace glm
                 glm::PODArray<int64_t> excludedEntities;
                 glm::Array<const glm::crowdio::glmHistoryRuntimeStructure*> historyStructures;
                 cachedSimulation.getHistoryRuntimeStructures(historyStructures);
-                glm::crowdio::createEntityExclusionList(excludedEntities, cachedSimulation.getSrcSimulationData(), _factory.getLayoutHistories(), historyStructures);
+                glm::crowdio::createEntityExclusionList(excludedEntities, cachedSimulation.getSrcSimulationData(), _factory->getLayoutHistories(), historyStructures);
                 size_t maxEntities = (size_t)floorf(simuData->_entityCount * renderPercent);
                 for (uint32_t iEntity = 0; iEntity < simuData->_entityCount; ++iEntity)
                 {
@@ -1267,7 +1269,7 @@ namespace glm
                     }
 
                     int32_t characterIdx = simuData->_characterIdx[iEntity];
-                    const glm::GolaemCharacter* character = _factory.getGolaemCharacter(characterIdx);
+                    const glm::GolaemCharacter* character = _factory->getGolaemCharacter(characterIdx);
                     if (character == NULL)
                     {
                         GLM_CROWD_TRACE_ERROR_LIMIT("The entity '" << entityId << "' has an invalid character index: '" << characterIdx << "'. Skipping it. Please assign a Rendering Type from the Rendering Attributes panel");

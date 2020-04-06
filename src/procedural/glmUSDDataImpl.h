@@ -53,7 +53,7 @@ namespace glm
             // layer's file format arguments.
             GolaemUSD_DataParams _params;
 
-            crowdio::SimulationCacheFactory _factory;
+            crowdio::SimulationCacheFactory* _factory;
             glm::Array<glm::PODArray<int>> _sgToSsPerChar;
             glm::Array<CharacterShaderData> _shaderDataPerChar;
 
