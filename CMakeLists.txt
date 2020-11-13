@@ -149,7 +149,7 @@ else()
     if(BUILD_USD_HOUDINI)
         # from Houdini toolkit/samples/USD/CMakeLists.txt
         if(MSVC)
-            target_link_libraries( ${PROJECT_NAME}
+            set(_houdini_link_libraries_ 
                 Houdini # Standard Houdini libraries
                 ${_houdini_hfs_root}/custom/houdini/dsolib/libgusd.lib
                 ${_houdini_hfs_root}/custom/houdini/dsolib/libpxr_ar.lib
@@ -168,9 +168,18 @@ else()
                 ${_houdini_hfs_root}/custom/houdini/dsolib/libpxr_usdUtils.lib
                 ${_houdini_hfs_root}/custom/houdini/dsolib/libpxr_vt.lib
                 ${_houdini_hfs_root}/custom/houdini/dsolib/libpxr_work.lib
-                ${_houdini_hfs_root}/custom/houdini/dsolib/hboost_python-mt.lib
                 ${PYTHON_LIBRARY}
             )
+            if(HOUDINI_VERSION LESS 18.5)
+                set(_houdini_link_libraries_ 
+                    ${_houdini_link_libraries_} 
+                    ${_houdini_hfs_root}/custom/houdini/dsolib/hboost_python-mt.lib)
+            else()
+                set(_houdini_link_libraries_ 
+                    ${_houdini_link_libraries_} 
+                    ${_houdini_hfs_root}/custom/houdini/dsolib/hboost_python27-mt-x64.lib)
+            endif()
+            target_link_libraries( ${PROJECT_NAME} ${_houdini_link_libraries_})
         else()
             # Link against Houdini libraries (including USD)
             if ( DEFINED ENV{HOUDINI_HDK_LINK_GUSD} )
