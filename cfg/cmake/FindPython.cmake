@@ -7,13 +7,13 @@
 #-----------------------------------------------------------------------------------------------------------------------------------------------------
 #
 # Description :
-#   This scripts is responsible for finding and configuring variables to use 'Katana' package.
+#   This scripts is responsible for finding and configuring variables to use 'Python' package.
 #
 # Output :
-# - PYTHON_FOUND = Katana found on this system ?
-# - PYTHON_ROOTDIR = Katana root directory
-# - PYTHON_INCDIR = Katana headers directory
-# - PYTHON_LIBS = Katana libraries
+# - PYTHON_FOUND = Python found on this system ?
+# - PYTHON_ROOTDIR = Python root directory
+# - PYTHON_INCDIR = Python headers directory
+# - PYTHON_LIBS = Python libraries
 
 if( ( "${PYTHON_FOUND}" STREQUAL "" ) OR ( NOT PYTHON_FOUND ) )
 
