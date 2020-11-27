@@ -1047,40 +1047,8 @@ namespace glm
             _primSpecPaths.insert(_GetRootPrimPath());
             std::vector<TfToken>& rootChildNames = _primChildNames[_GetRootPrimPath()];
 
-            bool framesFound = false;
-            for (size_t iCf = 0, cfCount = crowdFieldNames.size(); iCf < cfCount; ++iCf)
-            {
-                const glm::GlmString& cfName = crowdFieldNames[iCf];
-                if (cfName.empty())
-                {
-                    continue;
-                }
-
-                glm::crowdio::CachedSimulation& cachedSimulation = _factory->getCachedSimulation(cacheDir.c_str(), cacheName.c_str(), cfName.c_str());
-
-                const glm::crowdio::GlmSimulationData* simuData = cachedSimulation.getFinalSimulationData();
-
-                if (simuData == NULL)
-                {
-                    continue;
-                }
-
-                if (!framesFound)
-                {
-                    framesFound = cachedSimulation.getSrcFrameRangeAvailableOnDisk(_startFrame, _endFrame);
-                }
-                else
-                {
-                    int cfStartFrame = 0;
-                    int cfEndFrame = 0;
-                    framesFound = cachedSimulation.getSrcFrameRangeAvailableOnDisk(cfStartFrame, cfEndFrame);
-                    if (framesFound)
-                    {
-                        _startFrame = glm::max(cfStartFrame, _startFrame);
-                        _endFrame = glm::min(cfEndFrame, _endFrame);
-                    }
-                }
-            }
+            _startFrame = -100000;
+            _endFrame = 100000;
 
             _sgToSsPerChar.resize(_factory->getGolaemCharacters().size());
             _shaderDataPerChar.resize(_factory->getGolaemCharacters().size());
@@ -1127,6 +1095,10 @@ namespace glm
                 _ppAttrTypes[attrTypeIdx] = SdfSchema::GetInstance().FindType(value).GetAsToken();
                 _ppAttrDefaultValues[attrTypeIdx] = value;
             }
+            glm::PODArray<int> intAttrCounters(_factory->getGolaemCharacters().size(), 0);
+            glm::PODArray<int> floatAttrCounters(_factory->getGolaemCharacters().size(), 0);
+            glm::PODArray<int> stringAttrCounters(_factory->getGolaemCharacters().size(), 0);
+            glm::PODArray<int> vectorAttrCounters(_factory->getGolaemCharacters().size(), 0);
             for (int iChar = 0, charCount = _factory->getGolaemCharacters().sizeInt(); iChar < charCount; ++iChar)
             {
                 glm::PODArray<int>& shadingGroupToSurfaceShader = _sgToSsPerChar[iChar];
@@ -1154,10 +1126,10 @@ namespace glm
                 }
 
                 CharacterShaderData& charShaderData = _shaderDataPerChar[iChar];
-                int intAttrCounter = 0;
-                int floatAttrCounter = 0;
-                int sringAttrCounter = 0;
-                int vectorAttrCounter = 0;
+                int& intAttrCounter = intAttrCounters[iChar];
+                int& floatAttrCounter = floatAttrCounters[iChar];
+                int& stringAttrCounter = stringAttrCounters[iChar];
+                int& vectorAttrCounter = vectorAttrCounters[iChar];
                 for (size_t iShaderAttr = 0, shaderAttrCount = character->_shaderAttributes.size(); iShaderAttr < shaderAttrCount; ++iShaderAttr)
                 {
                     const glm::ShaderAttribute& shaderAttr = character->_shaderAttributes[iShaderAttr];
@@ -1178,8 +1150,8 @@ namespace glm
                     case glm::ShaderAttributeType::STRING:
                     {
 
-                        charShaderData._globalToStringShaderAttrIdx[iShaderAttr] = sringAttrCounter;
-                        ++sringAttrCounter;
+                        charShaderData._globalToStringShaderAttrIdx[iShaderAttr] = stringAttrCounter;
+                        ++stringAttrCounter;
                     }
                     break;
                     case glm::ShaderAttributeType::VECTOR:
@@ -1254,6 +1226,9 @@ namespace glm
                     entityData.data.inputGeoData._fbxBaker = &getFbxBaker();
                     entityData.data.cachedSimulationLock = &cachedSimulationLock;
 
+                    entityData.data.floatPPAttrValues.resize(simuData->_ppFloatAttributeCount, 0);
+                    entityData.data.vectorPPAttrValues.resize(simuData->_ppVectorAttributeCount, GfVec3f(0));
+
                     bool excludedEntity = iEntity >= maxEntities;
                     if (!excludedEntity)
                     {
@@ -1276,6 +1251,12 @@ namespace glm
                         entityData.data.excluded = true;
                         continue;
                     }
+
+                    entityData.data.intShaderAttrValues.resize(intAttrCounters[characterIdx], 0);
+                    entityData.data.floatShaderAttrValues.resize(floatAttrCounters[characterIdx], 0);
+                    entityData.data.stringShaderAttrValues.resize(stringAttrCounters[characterIdx]);
+                    entityData.data.vectorShaderAttrValues.resize(vectorAttrCounters[characterIdx], GfVec3f(0));
+
                     entityData.character = character;
                     entityData.characterIdx = characterIdx;
                     int32_t renderingTypeIdx = simuData->_renderingTypeIdx[iEntity];
@@ -2154,344 +2135,341 @@ namespace glm
                 if (simuData == NULL || frameData == NULL)
                 {
                     _InvalidateEntity(entityData);
+                    return;
                 }
 
                 entityData->data.enabled = frameData->_entityEnabled[entityData->data.inputGeoData._entityIndex] == 1;
                 if (!entityData->data.enabled)
                 {
                     _InvalidateEntity(entityData);
+                    return;
                 }
 
-                if (entityData->data.enabled)
+                GolaemDisplayMode::Value displayMode = (GolaemDisplayMode::Value)_params.glmDisplayMode;
+                // update entity position
+
+                float* rootPos = frameData->_bonePositions[entityData->data.bonePositionOffset];
+                entityData->data.pos.Set(rootPos);
+
+                switch (displayMode)
                 {
-                    GolaemDisplayMode::Value displayMode = (GolaemDisplayMode::Value)_params.glmDisplayMode;
-                    // update entity position
-
-                    float* rootPos = frameData->_bonePositions[entityData->data.bonePositionOffset];
-                    entityData->data.pos.Set(rootPos);
-
-                    switch (displayMode)
+                case glm::usdplugin::GolaemDisplayMode::BOUNDING_BOX:
+                {
+                }
+                break;
+                case glm::usdplugin::GolaemDisplayMode::SKELETON:
+                {
+                }
+                break;
+                case glm::usdplugin::GolaemDisplayMode::SKINMESH:
+                {
+                    int intAttrCounter = 0;
+                    int floatAttrCounter = 0;
+                    int stringAttrCounter = 0;
+                    int vectorAttrCounter = 0;
+                    // compute shader data
+                    const glm::Array<glm::GlmString>& shaderData = shaderDataContainer->data[entityData->data.inputGeoData._entityIndex];
+                    glm::Vector3 vectValue;
+                    for (size_t iShaderAttr = 0, shaderAttrCount = entityData->character->_shaderAttributes.size(); iShaderAttr < shaderAttrCount; iShaderAttr++)
                     {
-                    case glm::usdplugin::GolaemDisplayMode::BOUNDING_BOX:
-                    {
+                        const glm::GlmString& attrValueStr = shaderData[iShaderAttr];
+                        const glm::ShaderAttribute& shaderAttr = entityData->character->_shaderAttributes[iShaderAttr];
+                        switch (shaderAttr._type)
+                        {
+                        case glm::ShaderAttributeType::INT:
+                        {
+                            glm::fromString<int>(attrValueStr, entityData->data.intShaderAttrValues[intAttrCounter]);
+                            ++intAttrCounter;
+                        }
+                        break;
+                        case glm::ShaderAttributeType::FLOAT:
+                        {
+                            glm::fromString<float>(attrValueStr, entityData->data.floatShaderAttrValues[floatAttrCounter]);
+                            ++floatAttrCounter;
+                        }
+                        break;
+                        case glm::ShaderAttributeType::STRING:
+                        {
+                            entityData->data.stringShaderAttrValues[stringAttrCounter] = TfToken(attrValueStr.c_str());
+                            ++stringAttrCounter;
+                        }
+                        break;
+                        case glm::ShaderAttributeType::VECTOR:
+                        {
+                            glm::fromString(attrValueStr, vectValue);
+                            entityData->data.vectorShaderAttrValues[vectorAttrCounter].Set(vectValue.getFloatValues());
+                            ++vectorAttrCounter;
+                        }
+                        break;
+                        default:
+                            break;
+                        }
                     }
-                    break;
-                    case glm::usdplugin::GolaemDisplayMode::SKELETON:
+
+                    // update pp attributes
+                    for (uint8_t iFloatPPAttr = 0; iFloatPPAttr < simuData->_ppFloatAttributeCount; ++iFloatPPAttr)
                     {
+                        entityData->data.floatPPAttrValues[iFloatPPAttr] = frameData->_ppFloatAttributeData[iFloatPPAttr][entityData->data.inputGeoData._entityIndex];
                     }
-                    break;
-                    case glm::usdplugin::GolaemDisplayMode::SKINMESH:
+                    for (uint8_t iVectPPAttr = 0; iVectPPAttr < simuData->_ppVectorAttributeCount; ++iVectPPAttr)
                     {
-                        entityData->data.intShaderAttrValues.clear();
-                        entityData->data.floatShaderAttrValues.clear();
-                        entityData->data.stringShaderAttrValues.clear();
-                        entityData->data.vectorShaderAttrValues.clear();
-                        // compute shader data
-                        const glm::Array<glm::GlmString>& shaderData = shaderDataContainer->data[entityData->data.inputGeoData._entityIndex];
-                        glm::Vector3 vectValue;
-                        for (size_t iShaderAttr = 0, shaderAttrCount = entityData->character->_shaderAttributes.size(); iShaderAttr < shaderAttrCount; iShaderAttr++)
+                        entityData->data.vectorPPAttrValues[iVectPPAttr].Set(frameData->_ppVectorAttributeData[iVectPPAttr][entityData->data.inputGeoData._entityIndex]);
+                    }
+
+                    // update frame before computing geometry
+                    entityData->data.inputGeoData._frames.resize(1);
+                    entityData->data.inputGeoData._frames[0] = time;
+                    entityData->data.inputGeoData._frameDatas.resize(1);
+                    entityData->data.inputGeoData._frameDatas[0] = frameData;
+
+                    glm::crowdio::OutputEntityGeoData outputData; // TODO: see if storage is better
+                    glm::crowdio::GlmGeometryGenerationStatus geoStatus = glm::crowdio::glmPrepareEntityGeometry(&entityData->data.inputGeoData, &outputData);
+                    if (geoStatus == glm::crowdio::GIO_SUCCESS)
+                    {
+                        size_t meshCount = outputData._meshAssetNameIndices.size();
+
+                        glm::Array<glm::Array<glm::Vector3>>& frameDeformedVertices = outputData._deformedVertices[0];
+                        glm::Array<glm::Array<glm::Vector3>>& frameDeformedNormals = outputData._deformedNormals[0];
+
+                        if (outputData._geoType == glm::crowdio::GeometryType::FBX)
                         {
-                            const glm::GlmString& attrValueStr = shaderData[iShaderAttr];
-                            const glm::ShaderAttribute& shaderAttr = entityData->character->_shaderAttributes[iShaderAttr];
-                            switch (shaderAttr._type)
+                            // ----- FBX specific data
+                            FbxAMatrix nodeTransform;
+                            FbxAMatrix geomTransform;
+                            FbxAMatrix identityMatrix;
+                            identityMatrix.SetIdentity();
+                            FbxTime fbxTime;
+                            FbxVector4 fbxVect;
+                            // ----- end FBX specific data
+
+                            // Extract frame
+                            if (outputData._geoBeInfo._idGeometryFileIdx != -1)
                             {
-                            case glm::ShaderAttributeType::INT:
-                            {
-                                entityData->data.intShaderAttrValues.addOne();
-                                glm::fromString<int>(attrValueStr, entityData->data.intShaderAttrValues.back());
+                                float(&geometryFrameCacheData)[3] = frameData->_geoBehaviorAnimFrameInfo[outputData._geoBeInfo._geoDataIndex];
+                                double frameRate(FbxTime::GetFrameRate(outputData._fbxCharacter->touchFBXScene()->GetGlobalSettings().GetTimeMode()));
+                                fbxTime.SetGlobalTimeMode(FbxTime::eCustom, frameRate);
+                                fbxTime.SetMilliSeconds(long((double)geometryFrameCacheData[0] / frameRate * 1000.0));
                             }
-                            break;
-                            case glm::ShaderAttributeType::FLOAT:
+                            else
                             {
-                                entityData->data.floatShaderAttrValues.addOne();
-                                glm::fromString<float>(attrValueStr, entityData->data.floatShaderAttrValues.back());
+                                fbxTime = 0;
                             }
-                            break;
-                            case glm::ShaderAttributeType::STRING:
+
+                            for (size_t iRenderMesh = 0; iRenderMesh < meshCount; ++iRenderMesh)
                             {
-                                entityData->data.stringShaderAttrValues.addOne();
-                                entityData->data.stringShaderAttrValues.back() = TfToken(attrValueStr.c_str());
-                            }
-                            break;
-                            case glm::ShaderAttributeType::VECTOR:
-                            {
-                                entityData->data.vectorShaderAttrValues.addOne();
-                                glm::fromString(attrValueStr, vectValue);
-                                entityData->data.vectorShaderAttrValues.back().Set(vectValue.getFloatValues());
-                            }
-                            break;
-                            default:
-                                break;
-                            }
-                        }
+                                size_t iGeoFileMesh = outputData._meshAssetNameIndices[iRenderMesh];
 
-                        // update pp attributes
-                        entityData->data.floatPPAttrValues.resize(simuData->_ppFloatAttributeCount);
-                        entityData->data.vectorPPAttrValues.resize(simuData->_ppVectorAttributeCount);
-                        for (uint8_t iFloatPPAttr = 0; iFloatPPAttr < simuData->_ppFloatAttributeCount; ++iFloatPPAttr)
-                        {
-                            entityData->data.floatPPAttrValues[iFloatPPAttr] = frameData->_ppFloatAttributeData[iFloatPPAttr][entityData->data.inputGeoData._entityIndex];
-                        }
-                        for (uint8_t iVectPPAttr = 0; iVectPPAttr < simuData->_ppVectorAttributeCount; ++iVectPPAttr)
-                        {
-                            entityData->data.vectorPPAttrValues[iVectPPAttr].Set(frameData->_ppVectorAttributeData[iVectPPAttr][entityData->data.inputGeoData._entityIndex]);
-                        }
-
-                        // update frame before computing geometry
-                        entityData->data.inputGeoData._frames.resize(1);
-                        entityData->data.inputGeoData._frames[0] = time;
-                        entityData->data.inputGeoData._frameDatas.resize(1);
-                        entityData->data.inputGeoData._frameDatas[0] = frameData;
-
-                        glm::crowdio::OutputEntityGeoData outputData; // TODO: see if storage is better
-                        glm::crowdio::GlmGeometryGenerationStatus geoStatus = glm::crowdio::glmPrepareEntityGeometry(&entityData->data.inputGeoData, &outputData);
-                        if (geoStatus == glm::crowdio::GIO_SUCCESS)
-                        {
-                            size_t meshCount = outputData._meshAssetNameIndices.size();
-
-                            glm::Array<glm::Array<glm::Vector3>>& frameDeformedVertices = outputData._deformedVertices[0];
-                            glm::Array<glm::Array<glm::Vector3>>& frameDeformedNormals = outputData._deformedNormals[0];
-
-                            if (outputData._geoType == glm::crowdio::GeometryType::FBX)
-                            {
-                                // ----- FBX specific data
-                                FbxAMatrix nodeTransform;
-                                FbxAMatrix geomTransform;
-                                FbxAMatrix identityMatrix;
-                                identityMatrix.SetIdentity();
-                                FbxTime fbxTime;
-                                FbxVector4 fbxVect;
-                                // ----- end FBX specific data
-
-                                // Extract frame
-                                if (outputData._geoBeInfo._idGeometryFileIdx != -1)
+                                // meshDeformedVertices contains all fbx points, not just the ones that were filtered by vertexMasks
+                                const glm::Array<glm::Vector3>& meshDeformedVertices = frameDeformedVertices[iGeoFileMesh];
+                                size_t vertexCount = meshDeformedVertices.size();
+                                if (vertexCount == 0)
                                 {
-                                    float(&geometryFrameCacheData)[3] = frameData->_geoBehaviorAnimFrameInfo[outputData._geoBeInfo._geoDataIndex];
-                                    double frameRate(FbxTime::GetFrameRate(outputData._fbxCharacter->touchFBXScene()->GetGlobalSettings().GetTimeMode()));
-                                    fbxTime.SetGlobalTimeMode(FbxTime::eCustom, frameRate);
-                                    fbxTime.SetMilliSeconds(long((double)geometryFrameCacheData[0] / frameRate * 1000.0));
+                                    continue;
+                                }
+
+                                const EntityMeshData* meshData = entityData->data.meshData[iRenderMesh];
+
+                                // when fbxMesh == NULL, vertexCount == 0, so no need to check fbxMesh != NULL
+                                FbxNode* fbxNode = outputData._fbxCharacter->getCharacterFBXMeshes()[iGeoFileMesh];
+                                FbxMesh* fbxMesh = outputData._fbxCharacter->getCharacterFBXMesh(iGeoFileMesh);
+
+                                // for each mesh, get the transform in case of its position in not relative to the center of the world
+                                outputData._fbxCharacter->getMeshGlobalTransform(nodeTransform, fbxNode, fbxTime);
+                                glm::crowdio::CrowdFBXBaker::getGeomTransform(geomTransform, fbxNode);
+                                nodeTransform *= geomTransform;
+
+                                FbxLayer* fbxLayer0 = fbxMesh->GetLayer(0);
+                                bool hasNormals = false;
+                                bool hasMaterials = false;
+                                FbxLayerElementMaterial* materialElement = NULL;
+                                if (fbxLayer0 != NULL)
+                                {
+                                    hasNormals = fbxLayer0->GetNormals() != NULL;
+                                    materialElement = fbxLayer0->GetMaterials();
+                                    hasMaterials = materialElement != NULL;
+                                }
+
+                                bool hasTransform = !(nodeTransform == identityMatrix);
+
+                                unsigned int fbxVertexCount = fbxMesh->GetControlPointsCount();
+                                unsigned int fbxPolyCount = fbxMesh->GetPolygonCount();
+
+                                glm::PODArray<int> vertexMasks;
+                                glm::PODArray<int> polygonMasks;
+
+                                vertexMasks.assign(fbxVertexCount, -1);
+                                polygonMasks.assign(fbxPolyCount, 0);
+
+                                int meshMtlIdx = outputData._meshAssetMaterialIndices[iRenderMesh];
+
+                                // check material id and reconstruct data
+                                for (unsigned int iFbxPoly = 0; iFbxPoly < fbxPolyCount; ++iFbxPoly)
+                                {
+                                    int currentMtlIdx = 0;
+                                    if (hasMaterials)
+                                    {
+                                        currentMtlIdx = materialElement->GetIndexArray().GetAt(iFbxPoly);
+                                    }
+                                    if (currentMtlIdx == meshMtlIdx)
+                                    {
+                                        polygonMasks[iFbxPoly] = 1;
+                                        for (int iPolyVertex = 0, polyVertexCount = fbxMesh->GetPolygonSize(iFbxPoly); iPolyVertex < polyVertexCount; ++iPolyVertex)
+                                        {
+                                            int iFbxVertex = fbxMesh->GetPolygonVertex(iFbxPoly, iPolyVertex);
+                                            int& vertexMask = vertexMasks[iFbxVertex];
+                                            if (vertexMask >= 0)
+                                            {
+                                                continue;
+                                            }
+                                            vertexMask = 0;
+                                        }
+                                    }
+                                }
+
+                                for (unsigned int iFbxVertex = 0, iActualVertex = 0; iFbxVertex < fbxVertexCount; ++iFbxVertex)
+                                {
+                                    int& vertexMask = vertexMasks[iFbxVertex];
+                                    if (vertexMask >= 0)
+                                    {
+                                        vertexMask = iActualVertex;
+                                        ++iActualVertex;
+                                    }
+                                }
+
+                                unsigned int iActualVertex = 0;
+                                for (unsigned int iFbxVertex = 0; iFbxVertex < fbxVertexCount; ++iFbxVertex)
+                                {
+                                    int& vertexMask = vertexMasks[iFbxVertex];
+                                    if (vertexMask >= 0)
+                                    {
+                                        // meshDeformedVertices contains all fbx points, not just the ones that were filtered by vertexMasks
+                                        GfVec3f& point = meshData->data.points[iActualVertex];
+                                        // vertices
+                                        if (hasTransform)
+                                        {
+                                            const Vector3& glmVect = meshDeformedVertices[iFbxVertex];
+                                            fbxVect.Set(glmVect.x, glmVect.y, glmVect.z);
+                                            // transform vertex in case of local transformation
+                                            fbxVect = nodeTransform.MultT(fbxVect);
+                                            point.Set((float)fbxVect[0], (float)fbxVect[1], (float)fbxVect[2]);
+                                        }
+                                        else
+                                        {
+                                            const Vector3& meshVertex = meshDeformedVertices[iFbxVertex];
+                                            point.Set(meshVertex.getFloatValues());
+                                        }
+
+                                        point -= entityData->data.pos;
+
+                                        ++iActualVertex;
+                                    }
+                                }
+
+                                if (hasNormals)
+                                {
+                                    FbxAMatrix globalRotate(identityMatrix);
+                                    globalRotate.SetR(nodeTransform.GetR());
+                                    bool hasRotate = globalRotate != identityMatrix;
+
+                                    const glm::Array<glm::Vector3>& meshDeformedNormals = frameDeformedNormals[iGeoFileMesh];
+
+                                    // normals are always stored per polygon vertex
+                                    for (unsigned int iFbxPoly = 0, iFbxNormal = 0, iActualPolyVertex = 0; iFbxPoly < fbxPolyCount; ++iFbxPoly)
+                                    {
+                                        int polySize = fbxMesh->GetPolygonSize(iFbxPoly);
+                                        if (polygonMasks[iFbxPoly])
+                                        {
+                                            for (int iPolyVertex = 0; iPolyVertex < polySize; ++iPolyVertex, ++iFbxNormal, ++iActualPolyVertex)
+                                            {
+                                                // meshDeformedNormals contains all fbx normals, not just the ones that were filtered by polygonMasks
+                                                // do not reverse polygon order
+                                                if (hasRotate)
+                                                {
+                                                    const Vector3& glmVect = meshDeformedNormals[iFbxNormal];
+                                                    fbxVect.Set(glmVect.x, glmVect.y, glmVect.z);
+                                                    fbxVect = globalRotate.MultT(fbxVect);
+                                                    meshData->data.normals[iActualPolyVertex].Set(
+                                                        (float)fbxVect[0], (float)fbxVect[1], (float)fbxVect[2]);
+                                                }
+                                                else
+                                                {
+                                                    const glm::Vector3& deformedNormal = meshDeformedNormals[iFbxNormal];
+                                                    meshData->data.normals[iActualPolyVertex].Set(
+                                                        deformedNormal.getFloatValues());
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            iFbxNormal += polySize;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        else if (outputData._geoType == glm::crowdio::GeometryType::GCG)
+                        {
+
+                            for (size_t iRenderMesh = 0; iRenderMesh < meshCount; ++iRenderMesh)
+                            {
+                                const glm::Array<glm::Vector3>& meshDeformedVertices = frameDeformedVertices[iRenderMesh];
+                                size_t vertexCount = meshDeformedVertices.size();
+                                if (vertexCount == 0)
+                                {
+                                    continue;
+                                }
+
+                                const EntityMeshData* meshData = entityData->data.meshData[iRenderMesh];
+
+                                for (size_t iVertex = 0; iVertex < vertexCount; ++iVertex)
+                                {
+                                    const glm::Vector3& meshVertex = meshDeformedVertices[iVertex];
+                                    GfVec3f& point = meshData->data.points[iVertex];
+                                    point.Set(meshVertex.getFloatValues());
+                                    point -= entityData->data.pos;
+                                }
+
+                                const glm::Array<glm::Vector3>& meshDeformedNormals = frameDeformedNormals[iRenderMesh];
+
+                                glm::crowdio::GlmFileMeshTransform& assetFileMeshTransform = outputData._gcgCharacter->getGeometry()._transforms[outputData._transformIndicesInGcgFile[iRenderMesh]];
+                                glm::crowdio::GlmFileMesh& assetFileMesh = outputData._gcgCharacter->getGeometry()._meshes[assetFileMeshTransform._meshIndex];
+
+                                // add normals
+                                if (assetFileMesh._normalMode == glm::crowdio::GLM_NORMAL_PER_POLYGON_VERTEX)
+                                {
+                                    for (uint32_t iPoly = 0, iVertex = 0; iPoly < assetFileMesh._polygonCount; ++iPoly)
+                                    {
+                                        uint32_t polySize = assetFileMesh._polygonsVertexCount[iPoly];
+                                        for (uint32_t iPolyVtx = 0; iPolyVtx < polySize; ++iPolyVtx, ++iVertex)
+                                        {
+                                            // do not reverse polygon order
+                                            const glm::Vector3& vtxNormal = meshDeformedNormals[iVertex];
+                                            meshData->data.normals[iVertex].Set(vtxNormal.getFloatValues());
+                                        }
+                                    }
                                 }
                                 else
                                 {
-                                    fbxTime = 0;
-                                }
-
-                                for (size_t iRenderMesh = 0; iRenderMesh < meshCount; ++iRenderMesh)
-                                {
-                                    size_t iGeoFileMesh = outputData._meshAssetNameIndices[iRenderMesh];
-
-                                    // meshDeformedVertices contains all fbx points, not just the ones that were filtered by vertexMasks
-                                    const glm::Array<glm::Vector3>& meshDeformedVertices = frameDeformedVertices[iGeoFileMesh];
-                                    size_t vertexCount = meshDeformedVertices.size();
-                                    if (vertexCount == 0)
+                                    uint32_t* polygonNormalIndices = assetFileMesh._normalMode == glm::crowdio::GLM_NORMAL_PER_CONTROL_POINT ? assetFileMesh._polygonsVertexIndices : assetFileMesh._polygonsNormalIndices;
+                                    for (uint32_t iPoly = 0, iVertex = 0; iPoly < assetFileMesh._polygonCount; ++iPoly)
                                     {
-                                        continue;
-                                    }
-
-                                    const EntityMeshData* meshData = entityData->data.meshData[iRenderMesh];
-
-                                    // when fbxMesh == NULL, vertexCount == 0, so no need to check fbxMesh != NULL
-                                    FbxNode* fbxNode = outputData._fbxCharacter->getCharacterFBXMeshes()[iGeoFileMesh];
-                                    FbxMesh* fbxMesh = outputData._fbxCharacter->getCharacterFBXMesh(iGeoFileMesh);
-
-                                    // for each mesh, get the transform in case of its position in not relative to the center of the world
-                                    outputData._fbxCharacter->getMeshGlobalTransform(nodeTransform, fbxNode, fbxTime);
-                                    glm::crowdio::CrowdFBXBaker::getGeomTransform(geomTransform, fbxNode);
-                                    nodeTransform *= geomTransform;
-
-                                    FbxLayer* fbxLayer0 = fbxMesh->GetLayer(0);
-                                    bool hasNormals = false;
-                                    bool hasMaterials = false;
-                                    FbxLayerElementMaterial* materialElement = NULL;
-                                    if (fbxLayer0 != NULL)
-                                    {
-                                        hasNormals = fbxLayer0->GetNormals() != NULL;
-                                        materialElement = fbxLayer0->GetMaterials();
-                                        hasMaterials = materialElement != NULL;
-                                    }
-
-                                    bool hasTransform = !(nodeTransform == identityMatrix);
-
-                                    unsigned int fbxVertexCount = fbxMesh->GetControlPointsCount();
-                                    unsigned int fbxPolyCount = fbxMesh->GetPolygonCount();
-
-                                    glm::PODArray<int> vertexMasks;
-                                    glm::PODArray<int> polygonMasks;
-
-                                    vertexMasks.assign(fbxVertexCount, -1);
-                                    polygonMasks.assign(fbxPolyCount, 0);
-
-                                    int meshMtlIdx = outputData._meshAssetMaterialIndices[iRenderMesh];
-
-                                    // check material id and reconstruct data
-                                    for (unsigned int iFbxPoly = 0; iFbxPoly < fbxPolyCount; ++iFbxPoly)
-                                    {
-                                        int currentMtlIdx = 0;
-                                        if (hasMaterials)
+                                        uint32_t polySize = assetFileMesh._polygonsVertexCount[iPoly];
+                                        for (uint32_t iPolyVtx = 0; iPolyVtx < polySize; ++iPolyVtx, ++iVertex)
                                         {
-                                            currentMtlIdx = materialElement->GetIndexArray().GetAt(iFbxPoly);
-                                        }
-                                        if (currentMtlIdx == meshMtlIdx)
-                                        {
-                                            polygonMasks[iFbxPoly] = 1;
-                                            for (int iPolyVertex = 0, polyVertexCount = fbxMesh->GetPolygonSize(iFbxPoly); iPolyVertex < polyVertexCount; ++iPolyVertex)
-                                            {
-                                                int iFbxVertex = fbxMesh->GetPolygonVertex(iFbxPoly, iPolyVertex);
-                                                int& vertexMask = vertexMasks[iFbxVertex];
-                                                if (vertexMask >= 0)
-                                                {
-                                                    continue;
-                                                }
-                                                vertexMask = 0;
-                                            }
-                                        }
-                                    }
-
-                                    for (unsigned int iFbxVertex = 0, iActualVertex = 0; iFbxVertex < fbxVertexCount; ++iFbxVertex)
-                                    {
-                                        int& vertexMask = vertexMasks[iFbxVertex];
-                                        if (vertexMask >= 0)
-                                        {
-                                            vertexMask = iActualVertex;
-                                            ++iActualVertex;
-                                        }
-                                    }
-
-                                    unsigned int iActualVertex = 0;
-                                    for (unsigned int iFbxVertex = 0; iFbxVertex < fbxVertexCount; ++iFbxVertex)
-                                    {
-                                        int& vertexMask = vertexMasks[iFbxVertex];
-                                        if (vertexMask >= 0)
-                                        {
-                                            // meshDeformedVertices contains all fbx points, not just the ones that were filtered by vertexMasks
-                                            GfVec3f& point = meshData->data.points[iActualVertex];
-                                            // vertices
-                                            if (hasTransform)
-                                            {
-                                                const Vector3& glmVect = meshDeformedVertices[iFbxVertex];
-                                                fbxVect.Set(glmVect.x, glmVect.y, glmVect.z);
-                                                // transform vertex in case of local transformation
-                                                fbxVect = nodeTransform.MultT(fbxVect);
-                                                point.Set((float)fbxVect[0], (float)fbxVect[1], (float)fbxVect[2]);
-                                            }
-                                            else
-                                            {
-                                                const Vector3& meshVertex = meshDeformedVertices[iFbxVertex];
-                                                point.Set(meshVertex.getFloatValues());
-                                            }
-
-                                            point -= entityData->data.pos;
-
-                                            ++iActualVertex;
-                                        }
-                                    }
-
-                                    if (hasNormals)
-                                    {
-                                        FbxAMatrix globalRotate(identityMatrix);
-                                        globalRotate.SetR(nodeTransform.GetR());
-                                        bool hasRotate = globalRotate != identityMatrix;
-
-                                        const glm::Array<glm::Vector3>& meshDeformedNormals = frameDeformedNormals[iGeoFileMesh];
-
-                                        // normals are always stored per polygon vertex
-                                        for (unsigned int iFbxPoly = 0, iFbxNormal = 0, iActualPolyVertex = 0; iFbxPoly < fbxPolyCount; ++iFbxPoly)
-                                        {
-                                            int polySize = fbxMesh->GetPolygonSize(iFbxPoly);
-                                            if (polygonMasks[iFbxPoly])
-                                            {
-                                                for (int iPolyVertex = 0; iPolyVertex < polySize; ++iPolyVertex, ++iFbxNormal, ++iActualPolyVertex)
-                                                {
-                                                    // meshDeformedNormals contains all fbx normals, not just the ones that were filtered by polygonMasks
-                                                    // do not reverse polygon order
-                                                    if (hasRotate)
-                                                    {
-                                                        const Vector3& glmVect = meshDeformedNormals[iFbxNormal];
-                                                        fbxVect.Set(glmVect.x, glmVect.y, glmVect.z);
-                                                        fbxVect = globalRotate.MultT(fbxVect);
-                                                        meshData->data.normals[iActualPolyVertex].Set(
-                                                            (float)fbxVect[0], (float)fbxVect[1], (float)fbxVect[2]);
-                                                    }
-                                                    else
-                                                    {
-                                                        const glm::Vector3& deformedNormal = meshDeformedNormals[iFbxNormal];
-                                                        meshData->data.normals[iActualPolyVertex].Set(
-                                                            deformedNormal.getFloatValues());
-                                                    }
-                                                }
-                                            }
-                                            else
-                                            {
-                                                iFbxNormal += polySize;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            else if (outputData._geoType == glm::crowdio::GeometryType::GCG)
-                            {
-
-                                for (size_t iRenderMesh = 0; iRenderMesh < meshCount; ++iRenderMesh)
-                                {
-                                    const glm::Array<glm::Vector3>& meshDeformedVertices = frameDeformedVertices[iRenderMesh];
-                                    size_t vertexCount = meshDeformedVertices.size();
-                                    if (vertexCount == 0)
-                                    {
-                                        continue;
-                                    }
-
-                                    const EntityMeshData* meshData = entityData->data.meshData[iRenderMesh];
-
-                                    for (size_t iVertex = 0; iVertex < vertexCount; ++iVertex)
-                                    {
-                                        const glm::Vector3& meshVertex = meshDeformedVertices[iVertex];
-                                        GfVec3f& point = meshData->data.points[iVertex];
-                                        point.Set(meshVertex.getFloatValues());
-                                        point -= entityData->data.pos;
-                                    }
-
-                                    const glm::Array<glm::Vector3>& meshDeformedNormals = frameDeformedNormals[iRenderMesh];
-
-                                    glm::crowdio::GlmFileMeshTransform& assetFileMeshTransform = outputData._gcgCharacter->getGeometry()._transforms[outputData._transformIndicesInGcgFile[iRenderMesh]];
-                                    glm::crowdio::GlmFileMesh& assetFileMesh = outputData._gcgCharacter->getGeometry()._meshes[assetFileMeshTransform._meshIndex];
-
-                                    // add normals
-                                    if (assetFileMesh._normalMode == glm::crowdio::GLM_NORMAL_PER_POLYGON_VERTEX)
-                                    {
-                                        for (uint32_t iPoly = 0, iVertex = 0; iPoly < assetFileMesh._polygonCount; ++iPoly)
-                                        {
-                                            uint32_t polySize = assetFileMesh._polygonsVertexCount[iPoly];
-                                            for (uint32_t iPolyVtx = 0; iPolyVtx < polySize; ++iPolyVtx, ++iVertex)
-                                            {
-                                                // do not reverse polygon order
-                                                const glm::Vector3& vtxNormal = meshDeformedNormals[iVertex];
-                                                meshData->data.normals[iVertex].Set(vtxNormal.getFloatValues());
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        uint32_t* polygonNormalIndices = assetFileMesh._normalMode == glm::crowdio::GLM_NORMAL_PER_CONTROL_POINT ? assetFileMesh._polygonsVertexIndices : assetFileMesh._polygonsNormalIndices;
-                                        for (uint32_t iPoly = 0, iVertex = 0; iPoly < assetFileMesh._polygonCount; ++iPoly)
-                                        {
-                                            uint32_t polySize = assetFileMesh._polygonsVertexCount[iPoly];
-                                            for (uint32_t iPolyVtx = 0; iPolyVtx < polySize; ++iPolyVtx, ++iVertex)
-                                            {
-                                                // do not reverse polygon order
-                                                uint32_t normalIdx = polygonNormalIndices[iVertex];
-                                                const glm::Vector3& vtxNormal = meshDeformedNormals[normalIdx];
-                                                meshData->data.normals[iVertex].Set(vtxNormal.getFloatValues());
-                                            }
+                                            // do not reverse polygon order
+                                            uint32_t normalIdx = polygonNormalIndices[iVertex];
+                                            const glm::Vector3& vtxNormal = meshDeformedNormals[normalIdx];
+                                            meshData->data.normals[iVertex].Set(vtxNormal.getFloatValues());
                                         }
                                     }
                                 }
                             }
                         }
                     }
+                }
+                break;
+                default:
                     break;
-                    default:
-                        break;
-                    }
                 }
             }
         }
