@@ -825,7 +825,7 @@ namespace glm
                     if (value)
                     {
                         const CharacterShaderData& charShaderData = _shaderDataPerChar[entityData->characterIdx];
-                        const glm::ShaderAttribute& shaderAttr = meshData->entityData->character->_shaderAttributes[*shaderAttrIdx];
+                        const glm::ShaderAttributeV2& shaderAttr = meshData->entityData->character->_shaderAttributes[*shaderAttrIdx];
                         switch (shaderAttr._type)
                         {
                         case glm::ShaderAttributeType::INT:
@@ -1112,11 +1112,11 @@ namespace glm
                 shadingGroupToSurfaceShader.resize(character->_shadingGroups.size(), -1);
                 for (size_t iSg = 0, sgCount = character->_shadingGroups.size(); iSg < sgCount; ++iSg)
                 {
-                    const glm::ShadingGroup& shadingGroup = character->_shadingGroups[iSg];
+                    const glm::ShadingGroupV1& shadingGroup = character->_shadingGroups[iSg];
                     for (size_t iSa = 0, saCount = shadingGroup._shaderAssets.size(); iSa < saCount; ++iSa)
                     {
                         int shaderAssetIdx = shadingGroup._shaderAssets[iSa];
-                        const glm::ShaderAsset& shaderAsset = character->_shaderAssets[shaderAssetIdx];
+                        const glm::ShaderAssetV1& shaderAsset = character->_shaderAssets[shaderAssetIdx];
                         if (shaderAsset._category.find("surface") != glm::GlmString::npos)
                         {
                             shadingGroupToSurfaceShader[iSg] = shaderAssetIdx;
@@ -1132,7 +1132,7 @@ namespace glm
                 int& vectorAttrCounter = vectorAttrCounters[iChar];
                 for (size_t iShaderAttr = 0, shaderAttrCount = character->_shaderAttributes.size(); iShaderAttr < shaderAttrCount; ++iShaderAttr)
                 {
-                    const glm::ShaderAttribute& shaderAttr = character->_shaderAttributes[iShaderAttr];
+                    const glm::ShaderAttributeV2& shaderAttr = character->_shaderAttributes[iShaderAttr];
                     switch (shaderAttr._type)
                     {
                     case glm::ShaderAttributeType::INT:
@@ -1260,7 +1260,7 @@ namespace glm
                     entityData.character = character;
                     entityData.characterIdx = characterIdx;
                     int32_t renderingTypeIdx = simuData->_renderingTypeIdx[iEntity];
-                    const glm::RenderingType* renderingType = NULL;
+                    const glm::RenderingTypeV4* renderingType = NULL;
                     if (renderingTypeIdx >= 0 && renderingTypeIdx < character->_renderingTypes.sizeInt())
                     {
                         renderingType = &character->_renderingTypes[renderingTypeIdx];
@@ -1299,7 +1299,7 @@ namespace glm
                         {
                             // compute the bounding box of the current entity
                             glm::Vector3 halfExtents(1, 1, 1);
-                            const glm::GeometryAsset* geoAsset = entityData.character->getGeometryAsset(entityData.data.inputGeoData._geometryTag, 0); // any LOD should have same extents !
+                            const glm::GeometryAssetV2* geoAsset = entityData.character->getGeometryAsset(entityData.data.inputGeoData._geometryTag, 0); // any LOD should have same extents !
                             if (geoAsset != NULL)
                             {
                                 halfExtents = geoAsset->_halfExtentsYUp;
@@ -1650,7 +1650,7 @@ namespace glm
                                 glm::GlmString materialName = "";
                                 if (shadingGroupIdx >= 0)
                                 {
-                                    const glm::ShadingGroup& shGroup = outputData._character->_shadingGroups[shadingGroupIdx];
+                                    const glm::ShadingGroupV1& shGroup = outputData._character->_shadingGroups[shadingGroupIdx];
                                     materialName = materialPath;
                                     materialName.rtrim("/");
                                     materialName += "/";
@@ -1667,7 +1667,7 @@ namespace glm
                                         int shaderAssetIdx = shadingGroupToSurfaceShader[shadingGroupIdx];
                                         if (shaderAssetIdx >= 0)
                                         {
-                                            const glm::ShaderAsset& shAsset = outputData._character->_shaderAssets[shaderAssetIdx];
+                                            const glm::ShaderAssetV1& shAsset = outputData._character->_shaderAssets[shaderAssetIdx];
                                             materialName += shAsset._name;
                                         }
                                         else
@@ -1688,7 +1688,7 @@ namespace glm
                                     for (size_t iShAttr = 0, shAttrCount = shGroup._shaderAttributes.size(); iShAttr < shAttrCount; ++iShAttr)
                                     {
                                         int shAttrIdx = shGroup._shaderAttributes[iShAttr];
-                                        const glm::ShaderAttribute& shAttr = outputData._character->_shaderAttributes[shAttrIdx];
+                                        const glm::ShaderAttributeV2& shAttr = outputData._character->_shaderAttributes[shAttrIdx];
                                         GlmString attrName = shAttr._name;
                                         if (!attributeNamespace.empty())
                                         {
@@ -1907,7 +1907,7 @@ namespace glm
                     {
                         if (value)
                         {
-                            const glm::ShaderAttribute& shaderAttr = meshData->entityData->character->_shaderAttributes[*shaderAttrIdx];
+                            const glm::ShaderAttributeV2& shaderAttr = meshData->entityData->character->_shaderAttributes[*shaderAttrIdx];
                             *value = _shaderAttrDefaultValues[shaderAttr._type];
                         }
                         return true;
@@ -2062,7 +2062,7 @@ namespace glm
                     const size_t* shaderAttrIdx = TfMapLookupPtr(meshData->shaderAttrIndexes, nameToken);
                     if (shaderAttrIdx != NULL)
                     {
-                        const glm::ShaderAttribute& shaderAttr = meshData->entityData->character->_shaderAttributes[*shaderAttrIdx];
+                        const glm::ShaderAttributeV2& shaderAttr = meshData->entityData->character->_shaderAttributes[*shaderAttrIdx];
                         RETURN_TRUE_WITH_OPTIONAL_VALUE(TfToken(_shaderAttrTypes[shaderAttr._type].c_str()));
                     }
                 }
@@ -2173,7 +2173,7 @@ namespace glm
                     for (size_t iShaderAttr = 0, shaderAttrCount = entityData->character->_shaderAttributes.size(); iShaderAttr < shaderAttrCount; iShaderAttr++)
                     {
                         const glm::GlmString& attrValueStr = shaderData[iShaderAttr];
-                        const glm::ShaderAttribute& shaderAttr = entityData->character->_shaderAttributes[iShaderAttr];
+                        const glm::ShaderAttributeV2& shaderAttr = entityData->character->_shaderAttributes[iShaderAttr];
                         switch (shaderAttr._type)
                         {
                         case glm::ShaderAttributeType::INT:
