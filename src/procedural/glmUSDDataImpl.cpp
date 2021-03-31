@@ -1299,7 +1299,8 @@ namespace glm
                         {
                             // compute the bounding box of the current entity
                             glm::Vector3 halfExtents(1, 1, 1);
-                            const glm::GeometryAsset* geoAsset = entityData.character->getGeometryAsset(entityData.data.inputGeoData._geometryTag, 0); // any LOD should have same extents !
+                            size_t geoIdx = 0;
+                            const glm::GeometryAsset* geoAsset = entityData.character->getGeometryAsset(entityData.data.inputGeoData._geometryTag, geoIdx); // any LOD should have same extents !
                             if (geoAsset != NULL)
                             {
                                 halfExtents = geoAsset->_halfExtentsYUp;
