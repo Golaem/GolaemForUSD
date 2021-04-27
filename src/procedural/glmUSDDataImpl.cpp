@@ -1225,11 +1225,7 @@ namespace glm
                     entityData.data.floatPPAttrValues.resize(simuData->_ppFloatAttributeCount, 0);
                     entityData.data.vectorPPAttrValues.resize(simuData->_ppVectorAttributeCount, GfVec3f(0));
 
-                    bool excludedEntity = frameData->_entityEnabled[iEntity] != 1;
-                    if (!excludedEntity)
-                    {
-                        excludedEntity = iEntity >= maxEntities;
-                    }
+                    bool excludedEntity = iEntity >= maxEntities;
 
                     entityData.data.excluded = excludedEntity;
 
