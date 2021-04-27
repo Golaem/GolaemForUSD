@@ -1193,10 +1193,6 @@ namespace glm
                 // create lock for cached simulation
                 glm::SpinLock& cachedSimulationLock = _cachedSimulationLocks[&cachedSimulation];
 
-                glm::PODArray<int64_t> excludedEntities;
-                glm::Array<const glm::crowdio::glmHistoryRuntimeStructure*> historyStructures;
-                cachedSimulation.getHistoryRuntimeStructures(historyStructures);
-                glm::crowdio::createEntityExclusionList(excludedEntities, cachedSimulation.getSrcSimulationData(), _factory->getLayoutHistories(), historyStructures);
                 size_t maxEntities = (size_t)floorf(simuData->_entityCount * renderPercent);
                 for (uint32_t iEntity = 0; iEntity < simuData->_entityCount; ++iEntity)
                 {
@@ -1229,11 +1225,10 @@ namespace glm
                     entityData.data.floatPPAttrValues.resize(simuData->_ppFloatAttributeCount, 0);
                     entityData.data.vectorPPAttrValues.resize(simuData->_ppVectorAttributeCount, GfVec3f(0));
 
-                    bool excludedEntity = iEntity >= maxEntities;
+                    bool excludedEntity = frameData->_entityEnabled[iEntity] != 1;
                     if (!excludedEntity)
                     {
-                        size_t excludedEntityIdx;
-                        excludedEntity = glm::glmFindIndex(excludedEntities.begin(), excludedEntities.end(), entityId, excludedEntityIdx);
+                        excludedEntity = iEntity >= maxEntities;
                     }
 
                     entityData.data.excluded = excludedEntity;
