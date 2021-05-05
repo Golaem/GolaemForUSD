@@ -1113,15 +1113,10 @@ namespace glm
                 for (size_t iSg = 0, sgCount = character->_shadingGroups.size(); iSg < sgCount; ++iSg)
                 {
                     const glm::ShadingGroup& shadingGroup = character->_shadingGroups[iSg];
-                    for (size_t iSa = 0, saCount = shadingGroup._shaderAssets.size(); iSa < saCount; ++iSa)
+                    int shaderAssetIdx = character->findShaderAsset(shadingGroup, "surface");
+                    if (shaderAssetIdx >= 0)
                     {
-                        int shaderAssetIdx = shadingGroup._shaderAssets[iSa];
-                        const glm::ShaderAsset& shaderAsset = character->_shaderAssets[shaderAssetIdx];
-                        if (shaderAsset._category.find("surface") != glm::GlmString::npos)
-                        {
-                            shadingGroupToSurfaceShader[iSg] = shaderAssetIdx;
-                            break;
-                        }
+                        shadingGroupToSurfaceShader[iSg] = shaderAssetIdx;
                     }
                 }
 
