@@ -130,6 +130,8 @@ if(GOLAEMUSD_STANDALONE_BUILD)
         install( FILES "${PLUGININFO_PATH_${configuration}}" CONFIGURATIONS ${configuration} DESTINATION "${GOLAEM_INSTALL_PATH_${configuration}}/procedurals/usd" )      # install plugInfo file
     endforeach()
 
+    unset( CROWD_INSTALL_SKIP_DEBUG )
+
 # Included in Golaem Solution
 else()
 
@@ -252,4 +254,6 @@ else()
         endforeach()
         unset(USDPYTHONBOOSTLIB CACHE)
     endif()
+
+    unset( CROWD_INSTALL_SKIP_DEBUG )
 endif()
