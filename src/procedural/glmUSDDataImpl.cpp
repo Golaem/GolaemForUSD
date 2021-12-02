@@ -904,6 +904,10 @@ namespace glm
         {
             glm::GlmString validMeshName = glm::replaceString(meshName, ":", "_");
             validMeshName = glm::replaceString(validMeshName, "|", "_");
+            validMeshName = glm::replaceString(validMeshName, ".", "_");
+            validMeshName = glm::replaceString(validMeshName, ";", "_");
+            validMeshName = glm::replaceString(validMeshName, "\\", "_");
+            validMeshName = glm::replaceString(validMeshName, "-", "_");
             return validMeshName;
         }
 
