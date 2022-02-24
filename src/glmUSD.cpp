@@ -38,8 +38,6 @@ namespace glm
             {
                 printf("%s\n", usdplugin::getProductInformation().getCString());
 
-                glm::useCoreDefaultAllocator();
-
                 glm::initCore(); // inits logs
                 glm::getLog()->_logSeverity[glm::Log::CROWD] = glm::Log::LOG_WARNING;
                 glm::getLog()->_logSeverity[glm::Log::SDK] = glm::Log::LOG_ERROR;
@@ -72,7 +70,6 @@ namespace glm
                 glm::crowdio::finish();
                 glm::Singleton<USDLogger>::destroy();
                 glm::finishCore();
-                glm::setDefaultAllocator(NULL);
             }
         }
     } // namespace usdplugin
