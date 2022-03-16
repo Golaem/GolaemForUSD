@@ -172,14 +172,14 @@ else()
                 ${_houdini_hfs_root}/custom/houdini/dsolib/libpxr_work.lib
                 ${PYTHON_LIBRARY}
             )
-            if(HOUDINI_VERSION LESS 18.5)
-                set(_houdini_link_libraries_ 
-                    ${_houdini_link_libraries_} 
-                    ${_houdini_hfs_root}/custom/houdini/dsolib/hboost_python-mt.lib)
-            else()
+            if("${PYTHON_VERSION}" STREQUAL "2")
                 set(_houdini_link_libraries_ 
                     ${_houdini_link_libraries_} 
                     ${_houdini_hfs_root}/custom/houdini/dsolib/hboost_python27-mt-x64.lib)
+            else()
+                set(_houdini_link_libraries_ 
+                    ${_houdini_link_libraries_} 
+                    ${_houdini_hfs_root}/custom/houdini/dsolib/hboost_python37-mt-x64.lib)
             endif()
             target_link_libraries( ${PROJECT_NAME} ${_houdini_link_libraries_})
         else()
