@@ -136,7 +136,7 @@ namespace glm
             struct SkinMeshVolatileData
             {
                 // these parameters are animated
-
+                bool active = true;
                 VtVec3fArray points;
                 VtVec3fArray normals; // stored by polygon vertex
             };
@@ -162,6 +162,7 @@ namespace glm
             {
                 const SkelEntityData* entityData = NULL;
                 mutable SkelMeshVolatileData data;
+                std::map<TfToken, size_t, TfTokenFastArbitraryLessThan> shaderAttrIndexes;
             };
             TfHashMap<SdfPath, SkelMeshData, SdfPath::Hash> _skelMeshDataMap;
 
@@ -227,7 +228,7 @@ namespace glm
             bool _HasPropertyInterpolation(const SdfPath& path, VtValue* value) const;
 
             void _ComputeEntityMeshNames(glm::Array<glm::GlmString>& meshNames, glm::crowdio::OutputEntityGeoData& outputData, const SkinMeshEntityData* entityData) const;
-            void _ComputeEntityMeshNames(glm::Array<glm::GlmString>& meshNames, PODArray<bool>& activeMeshes, const SkelEntityData* entityData) const;
+            void _ComputeEntityMeshNames(glm::Array<glm::GlmString>& meshNames, PODArray<bool>& activeMeshes, glm::Array<PODArray<int>>& meshShadingGroups, const SkelEntityData* entityData) const;
             void _ComputeSkelEntity(const SkelEntityData* entityData, double time) const;
             void _ComputeSkinMeshEntity(const SkinMeshEntityData* entityData, double time) const;
             void _ComputeEntity(EntityVolatileData* entityData, const GolaemCharacter* character, double time) const;
