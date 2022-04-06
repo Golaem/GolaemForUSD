@@ -47,7 +47,8 @@ namespace glm
             (rightHanded)           
             (none)                   
             (interpolation)        
-            (invisible));
+            (invisible)
+        );
 
         TF_DEFINE_PRIVATE_TOKENS(
             _skinMeshEntityPropertyTokens,
@@ -55,12 +56,14 @@ namespace glm
             ((xformOpTranslate, "xformOp:translate"))
             ((displayColor, "primvars:displayColor"))
             ((visibility, "visibility"))
-            ((entityId, "entityId")));
+            ((entityId, "entityId"))
+        );
 
         TF_DEFINE_PRIVATE_TOKENS(
             _skelEntityPropertyTokens,
             ((visibility, "visibility"))
-            ((entityId, "entityId")));
+            ((entityId, "entityId"))
+        );
 
         TF_DEFINE_PRIVATE_TOKENS(
             _skinMeshPropertyTokens,
@@ -70,18 +73,26 @@ namespace glm
             ((points, "points"))
             ((subdivisionScheme, "subdivisionScheme"))
             ((normals, "normals"))
-            ((uvs, "primvars:st")));
+            ((uvs, "primvars:st"))
+        );
+
+        TF_DEFINE_PRIVATE_TOKENS(
+            _skelEntityRelationshipTokens,
+            ((animationSource, "skel:animationSource"))
+            ((skeleton, "skel:skeleton"))
+        );
 
         TF_DEFINE_PRIVATE_TOKENS(
             _skinMeshRelationshipTokens,
-            ((materialBinding, "material:binding")));
+            ((materialBinding, "material:binding"))
+        );
         // clang-format on
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
         // We create a static map from property names to the info about them that
         // we'll be querying for specs.
-        struct _EntityPrimPropertyInfo
+        struct _PrimPropertyInfo
         {
             VtValue defaultValue;
             TfToken typeName;
@@ -92,15 +103,15 @@ namespace glm
         };
 
         using _LeafPrimPropertyMap =
-            std::map<TfToken, _EntityPrimPropertyInfo, TfTokenFastArbitraryLessThan>;
+            std::map<TfToken, _PrimPropertyInfo, TfTokenFastArbitraryLessThan>;
 
-        struct _EntityPrimRelationshipInfo
+        struct _PrimRelationshipInfo
         {
             SdfPathListOp defaultTargetPath;
         };
 
         using _LeafPrimRelationshiphMap =
-            std::map<TfToken, _EntityPrimRelationshipInfo, TfTokenFastArbitraryLessThan>;
+            std::map<TfToken, _PrimRelationshipInfo, TfTokenFastArbitraryLessThan>;
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -193,9 +204,14 @@ namespace glm
         TF_MAKE_STATIC_DATA(
             (_LeafPrimRelationshiphMap), _skinMeshRelationships)
         {
-            std::vector<SdfPath> defaultMatList;
-            defaultMatList.push_back(SdfPath("/Root/Materials/DefaultGolaemMat"));
-            (*_skinMeshRelationships)[_skinMeshRelationshipTokens->materialBinding].defaultTargetPath = SdfPathListOp::CreateExplicit(defaultMatList);
+            (*_skinMeshRelationships)[_skinMeshRelationshipTokens->materialBinding].defaultTargetPath = SdfPathListOp::CreateExplicit({SdfPath("/Root/Materials/DefaultGolaemMat")});
+        }
+
+        TF_MAKE_STATIC_DATA(
+            (_LeafPrimRelationshiphMap), _skelEntityRelationships)
+        {
+            (*_skelEntityRelationships)[_skelEntityRelationshipTokens->animationSource].defaultTargetPath = SdfPathListOp::CreateExplicit({SdfPath("Rig/SkelAnim")});
+            (*_skelEntityRelationships)[_skelEntityRelationshipTokens->skeleton].defaultTargetPath = SdfPathListOp::CreateExplicit({SdfPath("Rig/Skel")});
         }
 
 #ifdef _MSC_VER
@@ -277,6 +293,14 @@ namespace glm
                         if (entityData != NULL)
                         {
                             return SdfSpecTypeAttribute;
+                        }
+                    }
+                    else if (TfMapLookupPtr(*_skelEntityRelationships, nameToken) != NULL)
+                    {
+                        const SkelEntityData* entityData = TfMapLookupPtr(_skelEntityDataMap, primPath);
+                        if (entityData != NULL)
+                        {
+                            return SdfSpecTypeRelationship;
                         }
                     }
                     else
@@ -575,6 +599,7 @@ namespace glm
                             if (entityData != NULL)
                             {
                                 std::vector<TfToken> entityTokens = _skelEntityPropertyTokens->allTokens;
+                                entityTokens.insert(entityTokens.end(), _skelEntityRelationshipTokens->allTokens.begin(), _skelEntityRelationshipTokens->allTokens.end());
                                 // add pp attributes
                                 for (const auto& itPPAttr : entityData->ppAttrIndexes)
                                 {
@@ -657,6 +682,13 @@ namespace glm
                 for (auto it : _skelEntityDataMap)
                 {
                     for (const TfToken& propertyName : _skelEntityPropertyTokens->allTokens)
+                    {
+                        if (!visitor->VisitSpec(data, it.first.AppendProperty(propertyName)))
+                        {
+                            return;
+                        }
+                    }
+                    for (const TfToken& propertyName : _skelEntityRelationshipTokens->allTokens)
                     {
                         if (!visitor->VisitSpec(data, it.first.AppendProperty(propertyName)))
                         {
@@ -758,10 +790,12 @@ namespace glm
                     {SdfFieldKeys->TypeName,
                      SdfFieldKeys->Default,
                      _geomCommonTokens->interpolation});
+                static std::vector<TfToken> relationshipFields(
+                    {SdfFieldKeys->TargetPaths});
                 {
                     if (_params.glmDisplayMode == GolaemDisplayMode::SKELETON)
                     {
-                        const _EntityPrimPropertyInfo* entityPropInfo = TfMapLookupPtr(*_skelEntityProperties, nameToken);
+                        const _PrimPropertyInfo* entityPropInfo = TfMapLookupPtr(*_skelEntityProperties, nameToken);
                         if (entityPropInfo != NULL)
                         {
                             const SkelEntityData* entityData = TfMapLookupPtr(_skelEntityDataMap, primPath);
@@ -779,6 +813,17 @@ namespace glm
                             }
                         }
                         else
+                        {
+                            const _PrimRelationshipInfo* entityRelInfo = TfMapLookupPtr(*_skelEntityRelationships, nameToken);
+                            if (entityRelInfo)
+                            {
+                                const SkelEntityData* entityData = TfMapLookupPtr(_skelEntityDataMap, primPath);
+                                if (entityData != NULL)
+                                {
+                                    return relationshipFields;
+                                }
+                            }
+                        }
                         {
                             const SkelEntityData* entityData = TfMapLookupPtr(_skelEntityDataMap, primPath);
                             if (entityData != NULL)
@@ -807,7 +852,7 @@ namespace glm
                     }
                     else
                     {
-                        const _EntityPrimPropertyInfo* entityPropInfo = TfMapLookupPtr(*_skinMeshEntityProperties, nameToken);
+                        const _PrimPropertyInfo* entityPropInfo = TfMapLookupPtr(*_skinMeshEntityProperties, nameToken);
                         if (entityPropInfo != NULL)
                         {
                             const SkinMeshEntityData* entityData = TfMapLookupPtr(_skinMeshEntityDataMap, primPath);
@@ -839,7 +884,7 @@ namespace glm
                         }
 
                         {
-                            const _EntityPrimPropertyInfo* entityMeshPropInfo = TfMapLookupPtr(*_skinMeshProperties, nameToken);
+                            const _PrimPropertyInfo* entityMeshPropInfo = TfMapLookupPtr(*_skinMeshProperties, nameToken);
                             if (entityMeshPropInfo)
                             {
                                 const SkinMeshData* meshData = TfMapLookupPtr(_skinMeshDataMap, primPath);
@@ -879,14 +924,12 @@ namespace glm
                             }
                         }
                         {
-                            const _EntityPrimRelationshipInfo* entityMeshRelInfo = TfMapLookupPtr(*_skinMeshRelationships, nameToken);
+                            const _PrimRelationshipInfo* entityMeshRelInfo = TfMapLookupPtr(*_skinMeshRelationships, nameToken);
                             if (entityMeshRelInfo)
                             {
                                 const SkinMeshData* meshData = TfMapLookupPtr(_skinMeshDataMap, primPath);
                                 if (meshData != NULL)
                                 {
-                                    static std::vector<TfToken> relationshipFields(
-                                        {SdfFieldKeys->TargetPaths});
                                     return relationshipFields;
                                 }
                             }
@@ -1680,9 +1723,17 @@ namespace glm
                         if (characterIdx < usdCharacterFilesList.size())
                         {
                             const glm::GlmString& usdCharacterFile = usdCharacterFilesList[characterIdx];
-                            SdfReferenceVector referenceArray;
-                            referenceArray.push_back(SdfReference(usdCharacterFile.c_str()));
-                            skelEntityData->data.referencedUsdCharacter.SetAppendedItems(referenceArray);
+                            skelEntityData->data.referencedUsdCharacter.SetAppendedItems({SdfReference(usdCharacterFile.c_str())});
+                        }
+
+                        SdfPath rigPath = entityPath.AppendChild(TfToken("Rig"));
+                        {
+                            SdfPath animationSourcePath = rigPath.AppendChild(TfToken("SkelAnim"));
+                            skelEntityData->animationSourcePath = SdfPathListOp::CreateExplicit({animationSourcePath});
+                        }
+                        {
+                            SdfPath skeletonPath = rigPath.AppendChild(TfToken("Skel"));
+                            skelEntityData->skeletonPath = SdfPathListOp::CreateExplicit({skeletonPath});
                         }
 
                         PODArray<bool> activeMeshes;
@@ -2124,9 +2175,7 @@ namespace glm
                                         break;
                                     }
                                     materialName = sanitizePrimName(materialName);
-                                    std::vector<SdfPath> pathArray;
-                                    pathArray.push_back(SdfPath(materialName.c_str()));
-                                    meshData->materialPath = SdfPathListOp::CreateExplicit(pathArray);
+                                    meshData->materialPath = SdfPathListOp::CreateExplicit({SdfPath(materialName.c_str())});
 
                                     // add shading group attributes
                                     for (size_t iShAttr = 0, shAttrCount = shGroup._shaderAttributes.size(); iShAttr < shAttrCount; ++iShAttr)
@@ -2176,7 +2225,7 @@ namespace glm
             if (_params.glmDisplayMode == GolaemDisplayMode::SKELETON)
             {
                 // Check that its one of our animated property names.
-                const _EntityPrimPropertyInfo* propInfo = TfMapLookupPtr(*_skelEntityProperties, nameToken);
+                const _PrimPropertyInfo* propInfo = TfMapLookupPtr(*_skelEntityProperties, nameToken);
                 if (propInfo != NULL)
                 {
                     const SkelEntityData* entityData = TfMapLookupPtr(_skelEntityDataMap, primPath);
@@ -2204,7 +2253,7 @@ namespace glm
             else
             {
                 // Check that its one of our animated property names.
-                const _EntityPrimPropertyInfo* propInfo = TfMapLookupPtr(*_skinMeshEntityProperties, nameToken);
+                const _PrimPropertyInfo* propInfo = TfMapLookupPtr(*_skinMeshEntityProperties, nameToken);
                 if (propInfo != NULL)
                 {
                     const SkinMeshEntityData* entityData = TfMapLookupPtr(_skinMeshEntityDataMap, primPath);
@@ -2258,7 +2307,7 @@ namespace glm
             // Check that it belongs to a leaf prim before getting the default value
             if (_params.glmDisplayMode == GolaemDisplayMode::SKELETON)
             {
-                const _EntityPrimPropertyInfo* propInfo = TfMapLookupPtr(*_skelEntityProperties, nameToken);
+                const _PrimPropertyInfo* propInfo = TfMapLookupPtr(*_skelEntityProperties, nameToken);
                 if (propInfo != NULL)
                 {
                     const SkelEntityData* entityData = TfMapLookupPtr(_skelEntityDataMap, primPath);
@@ -2328,7 +2377,7 @@ namespace glm
             }
             else
             {
-                const _EntityPrimPropertyInfo* propInfo = TfMapLookupPtr(*_skinMeshEntityProperties, nameToken);
+                const _PrimPropertyInfo* propInfo = TfMapLookupPtr(*_skinMeshEntityProperties, nameToken);
                 if (propInfo != NULL)
                 {
                     const SkinMeshEntityData* entityData = TfMapLookupPtr(_skinMeshEntityDataMap, primPath);
@@ -2461,27 +2510,59 @@ namespace glm
             // Check that it is one of our property names.
             const TfToken& nameToken = path.GetNameToken();
             SdfPath primPath = path.GetAbsoluteRootOrPrimPath();
-            const _EntityPrimRelationshipInfo* relInfo = TfMapLookupPtr(*_skinMeshRelationships, nameToken);
-            if (relInfo != NULL)
+
+            if (_params.glmDisplayMode == GolaemDisplayMode::SKELETON)
             {
-                // Check that it belongs to a leaf prim before getting the default value
-                const SkinMeshData* meshData = TfMapLookupPtr(_skinMeshDataMap, primPath);
-                if (meshData)
+                const _PrimRelationshipInfo* relInfo = TfMapLookupPtr(*_skelEntityRelationships, nameToken);
+                if (relInfo != NULL)
                 {
-                    if (value)
+                    // Check that it belongs to a leaf prim before getting the default value
+                    const SkelEntityData* entityData = TfMapLookupPtr(_skelEntityDataMap, primPath);
+                    if (entityData)
                     {
-                        if (nameToken == _skinMeshRelationshipTokens->materialBinding)
+                        if (value)
                         {
-                            *value = VtValue(meshData->materialPath);
+                            if (nameToken == _skelEntityRelationshipTokens->animationSource)
+                            {
+                                *value = VtValue(entityData->animationSourcePath);
+                            }
+                            else if (nameToken == _skelEntityRelationshipTokens->skeleton)
+                            {
+                                *value = VtValue(entityData->skeletonPath);
+                            }
+                            else
+                            {
+                                *value = VtValue(relInfo->defaultTargetPath);
+                            }
                         }
-                        else
-                        {
-                            *value = VtValue(relInfo->defaultTargetPath);
-                        }
+                        return true;
                     }
-                    return true;
                 }
-                return false;
+            }
+            else
+            {
+                const _PrimRelationshipInfo* relInfo = TfMapLookupPtr(*_skinMeshRelationships, nameToken);
+                if (relInfo != NULL)
+                {
+                    // Check that it belongs to a leaf prim before getting the default value
+                    const SkinMeshData* meshData = TfMapLookupPtr(_skinMeshDataMap, primPath);
+                    if (meshData)
+                    {
+                        if (value)
+                        {
+                            if (nameToken == _skinMeshRelationshipTokens->materialBinding)
+                            {
+                                *value = VtValue(meshData->materialPath);
+                            }
+                            else
+                            {
+                                *value = VtValue(relInfo->defaultTargetPath);
+                            }
+                        }
+                        return true;
+                    }
+                    return false;
+                }
             }
 
             return false;
@@ -2504,7 +2585,7 @@ namespace glm
             }
             else
             {
-                const _EntityPrimPropertyInfo* propInfo = TfMapLookupPtr(*_skinMeshProperties, nameToken);
+                const _PrimPropertyInfo* propInfo = TfMapLookupPtr(*_skinMeshProperties, nameToken);
                 if (propInfo != NULL)
                 {
                     // Check that it belongs to a leaf prim before getting the interpolation value
@@ -2541,7 +2622,7 @@ namespace glm
             SdfPath primPath = path.GetAbsoluteRootOrPrimPath();
             if (_params.glmDisplayMode == GolaemDisplayMode::SKELETON)
             {
-                const _EntityPrimPropertyInfo* propInfo = TfMapLookupPtr(*_skelEntityProperties, nameToken);
+                const _PrimPropertyInfo* propInfo = TfMapLookupPtr(*_skelEntityProperties, nameToken);
                 if (propInfo != NULL)
                 {
                     // Check that it belongs to a leaf prim before getting the type name value
@@ -2596,7 +2677,7 @@ namespace glm
             }
             else
             {
-                const _EntityPrimPropertyInfo* propInfo = TfMapLookupPtr(*_skinMeshEntityProperties, nameToken);
+                const _PrimPropertyInfo* propInfo = TfMapLookupPtr(*_skinMeshEntityProperties, nameToken);
                 if (propInfo != NULL)
                 {
                     // Check that it belongs to a leaf prim before getting the type name value

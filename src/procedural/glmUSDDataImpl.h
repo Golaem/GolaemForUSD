@@ -129,6 +129,8 @@ namespace glm
             struct SkelEntityData : public EntityData
             {
                 mutable SkelEntityVolatileData data;
+                SdfPathListOp animationSourcePath;
+                SdfPathListOp skeletonPath;
             };
             TfHashMap<SdfPath, SkelEntityData, SdfPath::Hash> _skelEntityDataMap;
 
