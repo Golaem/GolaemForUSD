@@ -1188,12 +1188,18 @@ namespace glm
                 if (entityData == NULL)
                 {
                     animData = TfMapLookupPtr(_skelAnimDataMap, primPath);
-                    entityData = animData->entityData;
+                    if (animData != NULL)
+                    {
+                        entityData = animData->entityData;
+                    }
                 }
                 if (entityData == NULL)
                 {
                     meshData = TfMapLookupPtr(_skelMeshDataMap, primPath);
-                    entityData = meshData->entityData;
+                    if (meshData != NULL)
+                    {
+                        entityData = meshData->entityData;
+                    }
                 }
                 if (entityData == NULL || entityData->data.excluded)
                 {
@@ -1406,6 +1412,8 @@ namespace glm
         //-----------------------------------------------------------------------------
         void GolaemUSD_DataImpl::_InitFromParams()
         {
+            ZoneScopedNC("InitFromParams", tracy::Color::SeaGreen);
+
             _startFrame = INT_MAX;
             _endFrame = INT_MIN;
 
@@ -3051,6 +3059,7 @@ namespace glm
             glm::ScopedLock<glm::SpinLock> entityComputeLock(entityData->data.entityComputeLock);
             if (entityData->data.computedTimeSample != time)
             {
+                ZoneScopedNC("ComputeSkelEntity", tracy::Color::SeaGreen);
                 entityData->data.computedTimeSample = time;
 
                 _ComputeEntity(&entityData->data, entityData->character, time);
@@ -3259,6 +3268,8 @@ namespace glm
             if (entityData->data.computedTimeSample != time)
             {
                 entityData->data.computedTimeSample = time;
+
+                ZoneScopedNC("ComputeSkinMeshEntity", tracy::Color::SeaGreen);
 
                 _ComputeEntity(&entityData->data, entityData->character, time);
                 if (!entityData->data.enabled)
