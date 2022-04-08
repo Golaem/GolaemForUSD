@@ -56,6 +56,7 @@ namespace glm
             crowdio::SimulationCacheFactory* _factory;
             glm::Array<glm::PODArray<int>> _sgToSsPerChar;
             glm::Array<CharacterShaderData> _shaderDataPerChar;
+            glm::Array<PODArray<int>> _snsIndicesPerChar;
 
             glm::Array<GlmString> _shaderAttrTypes;
             glm::Array<VtValue> _shaderAttrDefaultValues;
@@ -96,6 +97,7 @@ namespace glm
                 glm::Array<GfVec3f> vectorPPAttrValues;
 
                 glm::crowdio::InputEntityGeoData inputGeoData;
+                const glm::crowdio::GlmSimulationData* simuData = NULL;
             };
 
             struct SkinMeshData;
@@ -121,9 +123,11 @@ namespace glm
             TfHashMap<SdfPath, SkinMeshEntityData, SdfPath::Hash> _skinMeshEntityDataMap;
 
             struct SkelMeshData;
+            struct SkelAnimData;
             struct SkelEntityVolatileData : public EntityVolatileData
             {
                 glm::PODArray<SkelMeshData*> meshData;
+                SkelAnimData* animData = NULL;
                 SdfReferenceListOp referencedUsdCharacter;
             };
             struct SkelEntityData : public EntityData
@@ -133,7 +137,6 @@ namespace glm
                 SdfPathListOp skeletonPath;
             };
             TfHashMap<SdfPath, SkelEntityData, SdfPath::Hash> _skelEntityDataMap;
-
 
             struct SkinMeshVolatileData
             {
@@ -153,6 +156,19 @@ namespace glm
                 std::map<TfToken, size_t, TfTokenFastArbitraryLessThan> shaderAttrIndexes;
             };
             TfHashMap<SdfPath, SkinMeshData, SdfPath::Hash> _skinMeshDataMap;
+
+            struct SkelAnimData
+            {
+                VtTokenArray joints;
+                VtQuatfArray rotations;
+                VtVec3hArray scales;
+                bool scalesAnimated = false;
+                uint32_t boneSnsOffset = 0;
+
+                VtVec3fArray translations;
+                const SkelEntityData* entityData = NULL;
+            };
+            TfHashMap<SdfPath, SkelAnimData, SdfPath::Hash> _skelAnimDataMap;
 
             struct SkelMeshVolatileData
             {
