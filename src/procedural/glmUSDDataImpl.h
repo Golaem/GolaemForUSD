@@ -1,8 +1,8 @@
 /***************************************************************************
-*                                                                          *
-*  Copyright (C) Golaem S.A.  All Rights Reserved.                         *
-*                                                                          *
-***************************************************************************/
+ *                                                                          *
+ *  Copyright (C) Golaem S.A.  All Rights Reserved.                         *
+ *                                                                          *
+ ***************************************************************************/
 
 #pragma once
 
@@ -113,22 +113,22 @@ namespace glm
                 const glm::GolaemCharacter* character = NULL;
                 int characterIdx = -1;
                 std::map<TfToken, size_t, TfTokenFastArbitraryLessThan> ppAttrIndexes;
+                std::map<TfToken, size_t, TfTokenFastArbitraryLessThan> shaderAttrIndexes;
             };
 
             struct SkinMeshEntityData : public EntityData
             {
                 mutable SkinMeshEntityVolatileData data;
             };
-           
+
             TfHashMap<SdfPath, SkinMeshEntityData, SdfPath::Hash> _skinMeshEntityDataMap;
 
-            struct SkelMeshData;
             struct SkelAnimData;
             struct SkelEntityVolatileData : public EntityVolatileData
             {
-                glm::PODArray<SkelMeshData*> meshData;
                 SkelAnimData* animData = NULL;
                 SdfReferenceListOp referencedUsdCharacter;
+                SdfVariantSelectionMap meshVariants;
             };
             struct SkelEntityData : public EntityData
             {
@@ -153,7 +153,6 @@ namespace glm
                 VtIntArray faceVertexIndices;
                 glm::Array<VtVec2fArray> uvSets; // stored by polygon vertex
                 SdfPathListOp materialPath;
-                std::map<TfToken, size_t, TfTokenFastArbitraryLessThan> shaderAttrIndexes;
             };
             TfHashMap<SdfPath, SkinMeshData, SdfPath::Hash> _skinMeshDataMap;
 
@@ -169,21 +168,6 @@ namespace glm
                 const SkelEntityData* entityData = NULL;
             };
             TfHashMap<SdfPath, SkelAnimData, SdfPath::Hash> _skelAnimDataMap;
-
-            struct SkelMeshVolatileData
-            {
-                // these parameters are animated
-                bool active = true;
-            };
-
-            struct SkelMeshData
-            {
-                const SkelEntityData* entityData = NULL;
-                mutable SkelMeshVolatileData data;
-                std::map<TfToken, size_t, TfTokenFastArbitraryLessThan> shaderAttrIndexes;
-            };
-            TfHashMap<SdfPath, SkelMeshData, SdfPath::Hash> _skelMeshDataMap;
-
 
             mutable glm::GlmMap<const glm::crowdio::CachedSimulation*, glm::SpinLock> _cachedSimulationLocks;
 
@@ -246,7 +230,7 @@ namespace glm
             bool _HasPropertyInterpolation(const SdfPath& path, VtValue* value) const;
 
             void _ComputeEntityMeshNames(glm::Array<glm::GlmString>& meshNames, glm::crowdio::OutputEntityGeoData& outputData, const SkinMeshEntityData* entityData) const;
-            void _ComputeEntityMeshNames(glm::Array<glm::GlmString>& meshNames, PODArray<bool>& activeMeshes, glm::Array<PODArray<int>>& meshShadingGroups, const SkelEntityData* entityData) const;
+            void _ComputeEntityMeshNames(glm::Array<glm::GlmString>& meshNames, const SkelEntityData* entityData) const;
             void _ComputeSkelEntity(const SkelEntityData* entityData, double time) const;
             void _ComputeSkinMeshEntity(const SkinMeshEntityData* entityData, double time) const;
             void _ComputeEntity(EntityVolatileData* entityData, const GolaemCharacter* character, double time) const;
