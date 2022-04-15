@@ -97,7 +97,7 @@ namespace glm
                 glm::Array<GfVec3f> vectorPPAttrValues;
 
                 glm::crowdio::InputEntityGeoData inputGeoData;
-                const glm::crowdio::GlmSimulationData* simuData = NULL;
+                glm::crowdio::CachedSimulation* cachedSimulation;
             };
 
             struct SkinMeshData;
@@ -110,8 +110,6 @@ namespace glm
             // cached data for each entity
             struct EntityData
             {
-                const glm::GolaemCharacter* character = NULL;
-                int characterIdx = -1;
                 std::map<TfToken, size_t, TfTokenFastArbitraryLessThan> ppAttrIndexes;
                 std::map<TfToken, size_t, TfTokenFastArbitraryLessThan> shaderAttrIndexes;
             };
@@ -169,7 +167,7 @@ namespace glm
             };
             TfHashMap<SdfPath, SkelAnimData, SdfPath::Hash> _skelAnimDataMap;
 
-            mutable glm::GlmMap<const glm::crowdio::CachedSimulation*, glm::SpinLock> _cachedSimulationLocks;
+            mutable glm::Array<glm::SpinLock> _cachedSimulationLocks;
 
         public:
             GolaemUSD_DataImpl(const GolaemUSD_DataParams& params);

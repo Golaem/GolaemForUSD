@@ -1274,8 +1274,8 @@ namespace glm
                 {
                     if (value)
                     {
-                        const CharacterShaderData& charShaderData = _shaderDataPerChar[genericEntityData->characterIdx];
-                        const glm::ShaderAttribute& shaderAttr = genericEntityData->character->_shaderAttributes[*shaderAttrIdx];
+                        const CharacterShaderData& charShaderData = _shaderDataPerChar[entityVolatileData->inputGeoData._characterIdx];
+                        const glm::ShaderAttribute& shaderAttr = entityVolatileData->inputGeoData._character->_shaderAttributes[*shaderAttrIdx];
                         switch (shaderAttr._type)
                         {
                         case glm::ShaderAttributeType::INT:
@@ -1647,6 +1647,7 @@ namespace glm
             glm::Array<glm::GlmString> entityMeshNames;
             SdfPath animationsGroupPath;
             std::vector<TfToken>* animationsChildNames = NULL;
+            _cachedSimulationLocks.resize(crowdFieldNames.size());
             for (size_t iCf = 0, cfCount = crowdFieldNames.size(); iCf < cfCount; ++iCf)
             {
                 const glm::GlmString& glmCfName = crowdFieldNames[iCf];
@@ -1685,8 +1686,11 @@ namespace glm
                     continue;
                 }
 
+                // compute assets if needed
+                const glm::Array<glm::PODArray<int>>& entityAssets = cachedSimulation.getFinalEntityAssets(firstFrameInCache);
+
                 // create lock for cached simulation
-                glm::SpinLock& cachedSimulationLock = _cachedSimulationLocks[&cachedSimulation];
+                glm::SpinLock& cachedSimulationLock = _cachedSimulationLocks[iCf];
 
                 size_t maxEntities = (size_t)floorf(simuData->_entityCount * renderPercent);
                 for (uint32_t iEntity = 0; iEntity < simuData->_entityCount; ++iEntity)
@@ -1727,7 +1731,7 @@ namespace glm
                     volatileData->inputGeoData._dirMapRules = dirmapRules;
                     volatileData->inputGeoData._entityId = entityId;
                     volatileData->inputGeoData._entityIndex = iEntity;
-                    volatileData->inputGeoData._cachedSimulation = &cachedSimulation;
+                    volatileData->inputGeoData._simuData = simuData;
 
                     volatileData->inputGeoData._frames.resize(1);
                     volatileData->inputGeoData._frames[0] = firstFrameInCache;
@@ -1737,10 +1741,11 @@ namespace glm
                     volatileData->computedTimeSample = firstFrameInCache - 1; // ensure there will be a compute in QueryTimeSample
 
                     volatileData->cachedSimulationLock = &cachedSimulationLock;
-                    volatileData->simuData = simuData;
 
                     volatileData->floatPPAttrValues.resize(simuData->_ppFloatAttributeCount, 0);
                     volatileData->vectorPPAttrValues.resize(simuData->_ppVectorAttributeCount, GfVec3f(0));
+
+                    volatileData->cachedSimulation = &cachedSimulation;
 
                     bool excludedEntity = iEntity >= maxEntities;
 
@@ -1801,8 +1806,8 @@ namespace glm
                         entityData->shaderAttrIndexes[attrNameToken] = iShAttr;
                     }
 
-                    entityData->character = character;
-                    entityData->characterIdx = characterIdx;
+                    volatileData->inputGeoData._character = character;
+                    volatileData->inputGeoData._characterIdx = characterIdx;
                     int32_t renderingTypeIdx = simuData->_renderingTypeIdx[iEntity];
                     const glm::RenderingType* renderingType = NULL;
                     if (renderingTypeIdx >= 0 && renderingTypeIdx < character->_renderingTypes.sizeInt())
@@ -1814,6 +1819,8 @@ namespace glm
                     {
                         GLM_CROWD_TRACE_WARNING_LIMIT("The entity '" << entityId << "', character '" << character->_name << "' has an invalid rendering type: '" << renderingTypeIdx << "'. Using default rendering type.");
                     }
+
+                    volatileData->inputGeoData._assets = &entityAssets[volatileData->inputGeoData._entityIndex];
 
                     uint16_t entityType = simuData->_entityTypes[volatileData->inputGeoData._entityIndex];
 
@@ -1894,7 +1901,7 @@ namespace glm
                             // compute the bounding box of the current entity
                             glm::Vector3 halfExtents(1, 1, 1);
                             size_t geoIdx = 0;
-                            const glm::GeometryAsset* geoAsset = entityData->character->getGeometryAsset(volatileData->inputGeoData._geometryTag, geoIdx); // any LOD should have same extents !
+                            const glm::GeometryAsset* geoAsset = volatileData->inputGeoData._character->getGeometryAsset(volatileData->inputGeoData._geometryTag, geoIdx); // any LOD should have same extents !
                             if (geoAsset != NULL)
                             {
                                 halfExtents = geoAsset->_halfExtentsYUp;
@@ -2241,7 +2248,7 @@ namespace glm
                                 glm::GlmString materialName = "";
                                 if (shadingGroupIdx >= 0)
                                 {
-                                    const glm::ShadingGroup& shGroup = outputData._character->_shadingGroups[shadingGroupIdx];
+                                    const glm::ShadingGroup& shGroup = volatileData->inputGeoData._character->_shadingGroups[shadingGroupIdx];
                                     materialName = materialPath;
                                     materialName.rtrim("/");
                                     materialName += "/";
@@ -2258,7 +2265,7 @@ namespace glm
                                         int shaderAssetIdx = shadingGroupToSurfaceShader[shadingGroupIdx];
                                         if (shaderAssetIdx >= 0)
                                         {
-                                            const glm::ShaderAsset& shAsset = outputData._character->_shaderAssets[shaderAssetIdx];
+                                            const glm::ShaderAsset& shAsset = volatileData->inputGeoData._character->_shaderAssets[shaderAssetIdx];
                                             materialName += TfMakeValidIdentifier(shAsset._name.c_str());
                                         }
                                         else
@@ -2488,7 +2495,7 @@ namespace glm
                             {
                                 if (value)
                                 {
-                                    const glm::ShaderAttribute& shaderAttr = entityData->character->_shaderAttributes[*shaderAttrIdx];
+                                    const glm::ShaderAttribute& shaderAttr = entityData->data.inputGeoData._character->_shaderAttributes[*shaderAttrIdx];
                                     *value = _shaderAttrDefaultValues[shaderAttr._type];
                                 }
                                 return true;
@@ -2604,7 +2611,7 @@ namespace glm
                             {
                                 if (value)
                                 {
-                                    const glm::ShaderAttribute& shaderAttr = entityData->character->_shaderAttributes[*shaderAttrIdx];
+                                    const glm::ShaderAttribute& shaderAttr = entityData->data.inputGeoData._character->_shaderAttributes[*shaderAttrIdx];
                                     *value = _shaderAttrDefaultValues[shaderAttr._type];
                                 }
                                 return true;
@@ -2795,7 +2802,7 @@ namespace glm
                             const size_t* shaderAttrIdx = TfMapLookupPtr(entityData->shaderAttrIndexes, nameToken);
                             if (shaderAttrIdx != NULL)
                             {
-                                const glm::ShaderAttribute& shaderAttr = entityData->character->_shaderAttributes[*shaderAttrIdx];
+                                const glm::ShaderAttribute& shaderAttr = entityData->data.inputGeoData._character->_shaderAttributes[*shaderAttrIdx];
                                 RETURN_TRUE_WITH_OPTIONAL_VALUE(TfToken(_shaderAttrTypes[shaderAttr._type].c_str()));
                             }
                         }
@@ -2858,7 +2865,7 @@ namespace glm
                             const size_t* shaderAttrIdx = TfMapLookupPtr(entityData->shaderAttrIndexes, nameToken);
                             if (shaderAttrIdx != NULL)
                             {
-                                const glm::ShaderAttribute& shaderAttr = entityData->character->_shaderAttributes[*shaderAttrIdx];
+                                const glm::ShaderAttribute& shaderAttr = entityData->data.inputGeoData._character->_shaderAttributes[*shaderAttrIdx];
                                 RETURN_TRUE_WITH_OPTIONAL_VALUE(TfToken(_shaderAttrTypes[shaderAttr._type].c_str()));
                             }
                         }
@@ -2911,14 +2918,13 @@ namespace glm
         //-----------------------------------------------------------------------------
         void GolaemUSD_DataImpl::_ComputeEntityMeshNames(glm::Array<glm::GlmString>& meshNames, const SkelEntityData* entityData) const
         {
-            const glm::Array<glm::PODArray<int>>& entityAssets = entityData->data.inputGeoData._cachedSimulation->getFinalEntityAssets(entityData->data.inputGeoData._frames.empty() ? 0 : entityData->data.inputGeoData._frames.front());
             glm::PODArray<int> furAssetIds;
             glm::PODArray<size_t> meshAssetNameIndices;
             glm::PODArray<int> meshAssetMaterialIndices;
             glm::crowdio::computeMeshNames(
-                entityData->character,
+                entityData->data.inputGeoData._character,
                 entityData->data.inputGeoData._entityId,
-                entityAssets[entityData->data.inputGeoData._entityIndex],
+                *entityData->data.inputGeoData._assets,
                 meshNames,
                 furAssetIds,
                 meshAssetNameIndices,
@@ -2934,23 +2940,23 @@ namespace glm
                 ZoneScopedNC("ComputeSkelEntity", tracy::Color::SeaGreen);
                 entityData->data.computedTimeSample = time;
 
-                _ComputeEntity(&entityData->data, entityData->character, time);
+                _ComputeEntity(&entityData->data, entityData->data.inputGeoData._character, time);
                 if (!entityData->data.enabled)
                 {
                     return;
                 }
 
                 const glm::crowdio::GlmFrameData* frameData = entityData->data.inputGeoData._frameDatas[0];
-                const glm::crowdio::GlmSimulationData* simuData = entityData->data.simuData;
+                const glm::crowdio::GlmSimulationData* simuData = entityData->data.inputGeoData._simuData;
 
-                const PODArray<int>& characterSnsIndices = _snsIndicesPerChar[entityData->characterIdx];
+                const PODArray<int>& characterSnsIndices = _snsIndicesPerChar[entityData->data.inputGeoData._characterIdx];
 
                 float entityScale = simuData->_scales[entityData->data.inputGeoData._entityIndex];
                 uint16_t entityType = simuData->_entityTypes[entityData->data.inputGeoData._entityIndex];
 
                 uint16_t boneCount = simuData->_boneCount[entityType];
 
-                const glm::PODArray<size_t>& specificToCacheBoneIndices = entityData->character->_converterMapping._skeletonDescription->getSpecificToCacheBoneIndices();
+                const glm::PODArray<size_t>& specificToCacheBoneIndices = entityData->data.inputGeoData._character->_converterMapping._skeletonDescription->getSpecificToCacheBoneIndices();
 
                 Array<Vector3> specificBonesWorldScales(boneCount, Vector3(1, 1, 1)); // used to fix mesh translations by reverting local scale
                 SkelAnimData* animData = entityData->data.animData;
@@ -2987,7 +2993,7 @@ namespace glm
                     {
                         GfVec3h& scaleValue = animData->scales[iBone];
 
-                        const HierarchicalBone* currentBone = entityData->character->_converterMapping._skeletonDescription->getBones()[iBone];
+                        const HierarchicalBone* currentBone = entityData->data.inputGeoData._character->_converterMapping._skeletonDescription->getBones()[iBone];
                         const HierarchicalBone* fatherBone = currentBone->getFather();
                         // skip scales parented to root, root holds the entityScale and cannot be SnS'ed
                         if (fatherBone != NULL)
@@ -3005,7 +3011,7 @@ namespace glm
                 {
                     size_t boneIndexInCache = specificToCacheBoneIndices[iBone];
 
-                    const HierarchicalBone* currentBone = entityData->character->_converterMapping._skeletonDescription->getBones()[iBone];
+                    const HierarchicalBone* currentBone = entityData->data.inputGeoData._character->_converterMapping._skeletonDescription->getBones()[iBone];
                     const HierarchicalBone* fatherBone = currentBone->getFather();
 
                     // get translation/rotation values as 3 float
@@ -3051,13 +3057,13 @@ namespace glm
         //-----------------------------------------------------------------------------
         void GolaemUSD_DataImpl::_ComputeEntity(EntityVolatileData* entityData, const GolaemCharacter* character, double time) const
         {
-            const glm::crowdio::GlmSimulationData* simuData = entityData->simuData;
+            const glm::crowdio::GlmSimulationData* simuData = entityData->inputGeoData._simuData;
             const glm::crowdio::GlmFrameData* frameData = NULL;
             const glm::ShaderAssetDataContainer* shaderDataContainer = NULL;
             {
                 glm::ScopedLock<glm::SpinLock> cachedSimuLock(*entityData->cachedSimulationLock);
-                frameData = entityData->inputGeoData._cachedSimulation->getFinalFrameData(time, UINT32_MAX, true);
-                shaderDataContainer = entityData->inputGeoData._cachedSimulation->getFinalShaderData(time, UINT32_MAX, true);
+                frameData = entityData->cachedSimulation->getFinalFrameData(time, UINT32_MAX, true);
+                shaderDataContainer = entityData->cachedSimulation->getFinalShaderData(time, UINT32_MAX, true);
             }
             if (simuData == NULL || frameData == NULL)
             {
@@ -3143,7 +3149,7 @@ namespace glm
 
                 ZoneScopedNC("ComputeSkinMeshEntity", tracy::Color::SeaGreen);
 
-                _ComputeEntity(&entityData->data, entityData->character, time);
+                _ComputeEntity(&entityData->data, entityData->data.inputGeoData._character, time);
                 if (!entityData->data.enabled)
                 {
                     return;
