@@ -580,12 +580,16 @@ namespace glm
                 {
                     if (_params.glmDisplayMode == GolaemDisplayMode::SKELETON)
                     {
+#if PXR_VERSION >= 2102 // there is a bug with instances in lower versions: https://github.com/PixarAnimationStudios/USD/issues/1347
                         SdfPath primPath = path.GetAbsoluteRootOrPrimPath();
                         const SkelEntityData* entityData = TfMapLookupPtr(_skelEntityDataMap, primPath);
                         if (entityData != NULL)
                         {
                             RETURN_TRUE_WITH_OPTIONAL_VALUE(true);
                         }
+#else
+                        RETURN_TRUE_WITH_OPTIONAL_VALUE(false);
+#endif
                     }
                 }
 
