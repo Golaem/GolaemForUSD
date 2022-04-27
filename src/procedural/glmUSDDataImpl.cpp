@@ -1778,7 +1778,7 @@ namespace glm
                     size_t ppAttrIdx = 0;
                     for (uint8_t iFloatPPAttr = 0; iFloatPPAttr < simuData->_ppFloatAttributeCount; ++iFloatPPAttr, ++ppAttrIdx)
                     {
-                        GlmString attrName = simuData->_ppFloatAttributeNames[iFloatPPAttr];
+                        GlmString attrName = TfMakeValidIdentifier(simuData->_ppFloatAttributeNames[iFloatPPAttr]);
                         if (!attributeNamespace.empty())
                         {
                             attrName = attributeNamespace + ":" + attrName;
@@ -1788,7 +1788,7 @@ namespace glm
                     }
                     for (uint8_t iVectPPAttr = 0; iVectPPAttr < simuData->_ppVectorAttributeCount; ++iVectPPAttr, ++ppAttrIdx)
                     {
-                        GlmString attrName = simuData->_ppVectorAttributeNames[iVectPPAttr];
+                        GlmString attrName = TfMakeValidIdentifier(simuData->_ppVectorAttributeNames[iVectPPAttr]);
                         if (!attributeNamespace.empty())
                         {
                             attrName = attributeNamespace + ":" + attrName;
@@ -1801,7 +1801,7 @@ namespace glm
                     for (size_t iShAttr = 0, shAttrCount = character->_shaderAttributes.size(); iShAttr < shAttrCount; ++iShAttr)
                     {
                         const glm::ShaderAttribute& shAttr = character->_shaderAttributes[iShAttr];
-                        GlmString attrName = shAttr._name;
+                        GlmString attrName = TfMakeValidIdentifier(shAttr._name.c_str());
                         if (!attributeNamespace.empty())
                         {
                             attrName = attributeNamespace + ":" + attrName;
