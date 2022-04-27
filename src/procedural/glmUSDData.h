@@ -30,23 +30,23 @@ namespace glm
         // functions for converting between file format arguments and dictionary values.
         // xx(TYPE, NAME, DEFAULT_VALUE)
         // clang-format off
-#define GOLAEM_USD_DATA_PARAMS_X_FIELDS         \
-    xx(TfToken, glmCacheLibFile, "")            \
-    xx(TfToken, glmCacheLibItem, "")            \
-    xx(TfToken, glmCrowdFields, "")			    \
-    xx(TfToken, glmCacheName, "")               \
-    xx(TfToken, glmCacheDir, "")                \
-    xx(TfToken, glmCharacterFiles, "")          \
-    xx(TfToken, glmUsdCharacterFiles, "")       \
-    xx(bool, glmEnableLayout, true)             \
-    xx(TfToken, glmLayoutFiles, "")             \
-	xx(TfToken, glmTerrainFile, "")             \
-    xx(float, glmRenderPercent, 100.f)          \
-    xx(short, glmDisplayMode, 2)                \
-    xx(short, glmGeometryTag, 0)                \
-    xx(TfToken, glmDirmap, "")					\
-    xx(TfToken, glmMaterialPath, "/Materials")  \
-    xx(short, glmMaterialAssignMode, 0)         \
+#define GOLAEM_USD_DATA_PARAMS_X_FIELDS             \
+    xx(TfToken, glmCacheLibFile, "")                \
+    xx(TfToken, glmCacheLibItem, "")                \
+    xx(TfToken, glmCrowdFields, "")	                \
+    xx(TfToken, glmCacheName, "")                   \
+    xx(TfToken, glmCacheDir, "")                    \
+    xx(TfToken, glmCharacterFiles, "")              \
+    xx(TfToken, glmUsdCharacterFiles, "")           \
+    xx(bool, glmEnableLayout, true)                 \
+    xx(TfToken, glmLayoutFiles, "")                 \
+	xx(TfToken, glmTerrainFile, "")                 \
+    xx(float, glmRenderPercent, 100.f)              \
+    xx(short, glmDisplayMode, 2)                    \
+    xx(short, glmGeometryTag, 0)                    \
+    xx(TfToken, glmDirmap, "")                      \
+    xx(TfToken, glmMaterialPath, "/Root/Materials") \
+    xx(short, glmMaterialAssignMode, 0)             \
     xx(TfToken, glmAttributeNamespace, "")
         // clang-format on
 
@@ -57,7 +57,7 @@ namespace glm
 #define GOLAEM_USD_DATA_PARAMS_TOKENS   \
     (glmCacheLibFile)                   \
     (glmCacheLibItem)                   \
-    (glmCrowdFields)					\
+    (glmCrowdFields)                    \
     (glmCacheName)                      \
     (glmCacheDir)                       \
     (glmCharacterFiles)                 \
@@ -68,7 +68,7 @@ namespace glm
     (glmRenderPercent)                  \
     (glmDisplayMode)                    \
     (glmGeometryTag)                    \
-    (glmDirmap)							\
+    (glmDirmap)                         \
     (glmMaterialPath)                   \
     (glmMaterialAssignMode)             \
     (glmAttributeNamespace)

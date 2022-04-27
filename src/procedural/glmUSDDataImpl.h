@@ -49,36 +49,6 @@ namespace glm
         class GolaemUSD_DataImpl
         {
         private:
-            // The parameters use to generate specs and time samples, obtained from the
-            // layer's file format arguments.
-            GolaemUSD_DataParams _params;
-
-            crowdio::SimulationCacheFactory* _factory;
-            glm::Array<glm::PODArray<int>> _sgToSsPerChar;
-            glm::Array<CharacterShaderData> _shaderDataPerChar;
-            glm::Array<PODArray<int>> _snsIndicesPerChar;
-
-            glm::Array<GlmString> _shaderAttrTypes;
-            glm::Array<VtValue> _shaderAttrDefaultValues;
-
-            glm::Array<GlmString> _ppAttrTypes;
-            glm::Array<VtValue> _ppAttrDefaultValues;
-
-            int _startFrame;
-            int _endFrame;
-
-            // Cached set of generated time sample times. All of the animated property
-            // time sample fields have the same time sample times.
-            std::set<double> _animTimeSampleTimes;
-
-            // Cached set of all paths with a generated prim spec.
-            TfHashSet<SdfPath, SdfPath::Hash> _primSpecPaths;
-
-            // Cached list of the names of all child prims for each generated prim spec
-            // that is not a leaf. The child prim names are the same for all prims that
-            // make up the cube layout hierarchy.
-            TfHashMap<SdfPath, std::vector<TfToken>, SdfPath::Hash> _primChildNames;
-
             struct EntityVolatileData
             {
                 double computedTimeSample = 0;
@@ -119,8 +89,6 @@ namespace glm
                 mutable SkinMeshEntityVolatileData data;
             };
 
-            TfHashMap<SdfPath, SkinMeshEntityData, SdfPath::Hash> _skinMeshEntityDataMap;
-
             struct SkelAnimData;
             struct SkelEntityVolatileData : public EntityVolatileData
             {
@@ -134,7 +102,6 @@ namespace glm
                 SdfPathListOp animationSourcePath;
                 SdfPathListOp skeletonPath;
             };
-            TfHashMap<SdfPath, SkelEntityData, SdfPath::Hash> _skelEntityDataMap;
 
             struct SkinMeshVolatileData
             {
@@ -145,14 +112,13 @@ namespace glm
             };
             struct SkinMeshData
             {
-                const SkinMeshEntityData* entityData = NULL;
+                const EntityData* entityData = NULL;
                 mutable SkinMeshVolatileData data;
                 VtIntArray faceVertexCounts;
                 VtIntArray faceVertexIndices;
                 glm::Array<VtVec2fArray> uvSets; // stored by polygon vertex
                 SdfPathListOp materialPath;
             };
-            TfHashMap<SdfPath, SkinMeshData, SdfPath::Hash> _skinMeshDataMap;
 
             struct SkelAnimData
             {
@@ -165,6 +131,43 @@ namespace glm
                 VtVec3fArray translations;
                 const SkelEntityData* entityData = NULL;
             };
+
+            // The parameters use to generate specs and time samples, obtained from the
+            // layer's file format arguments.
+            GolaemUSD_DataParams _params;
+
+            crowdio::SimulationCacheFactory* _factory;
+            glm::Array<glm::PODArray<int>> _sgToSsPerChar;
+            glm::Array<CharacterShaderData> _shaderDataPerChar;
+            glm::Array<PODArray<int>> _snsIndicesPerChar;
+
+            glm::Array<GlmString> _shaderAttrTypes;
+            glm::Array<VtValue> _shaderAttrDefaultValues;
+
+            glm::Array<GlmString> _ppAttrTypes;
+            glm::Array<VtValue> _ppAttrDefaultValues;
+
+            int _startFrame;
+            int _endFrame;
+
+            // Cached set of generated time sample times. All of the animated property
+            // time sample fields have the same time sample times.
+            std::set<double> _animTimeSampleTimes;
+
+            // Cached set of all paths with a generated prim spec.
+            TfHashSet<SdfPath, SdfPath::Hash> _primSpecPaths;
+
+            // Cached list of the names of all child prims for each generated prim spec
+            // that is not a leaf. The child prim names are the same for all prims that
+            // make up the cube layout hierarchy.
+            TfHashMap<SdfPath, std::vector<TfToken>, SdfPath::Hash> _primChildNames;
+
+            TfHashMap<SdfPath, SkinMeshEntityData, SdfPath::Hash> _skinMeshEntityDataMap;
+
+            TfHashMap<SdfPath, SkelEntityData, SdfPath::Hash> _skelEntityDataMap;
+
+            TfHashMap<SdfPath, SkinMeshData, SdfPath::Hash> _skinMeshDataMap;
+
             TfHashMap<SdfPath, SkelAnimData, SdfPath::Hash> _skelAnimDataMap;
 
             mutable glm::Array<glm::SpinLock> _cachedSimulationLocks;

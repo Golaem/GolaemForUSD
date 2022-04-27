@@ -1205,7 +1205,7 @@ namespace glm
                 if (entityData == NULL)
                 {
                     meshData = TfMapLookupPtr(_skinMeshDataMap, primPath);
-                    entityData = meshData->entityData;
+                    entityData = static_cast<const SkinMeshEntityData*>(meshData->entityData);
                 }
                 if (entityData == NULL || entityData->data.excluded)
                 {
@@ -1351,7 +1351,7 @@ namespace glm
         //-----------------------------------------------------------------------------
         void GolaemUSD_DataImpl::_InitFromParams()
         {
-            ZoneScopedNC("InitFromParams", tracy::Color::SeaGreen);
+            ZoneScopedNC("InitFromParams", GLM_COLOR_CACHE);
 
             _startFrame = INT_MAX;
             _endFrame = INT_MIN;
@@ -2937,7 +2937,7 @@ namespace glm
             glm::ScopedLock<glm::SpinLock> entityComputeLock(entityData->data.entityComputeLock);
             if (entityData->data.computedTimeSample != time)
             {
-                ZoneScopedNC("ComputeSkelEntity", tracy::Color::SeaGreen);
+                ZoneScopedNC("ComputeSkelEntity", GLM_COLOR_CACHE);
                 entityData->data.computedTimeSample = time;
 
                 _ComputeEntity(&entityData->data, entityData->data.inputGeoData._character, time);
@@ -3147,7 +3147,7 @@ namespace glm
             {
                 entityData->data.computedTimeSample = time;
 
-                ZoneScopedNC("ComputeSkinMeshEntity", tracy::Color::SeaGreen);
+                ZoneScopedNC("ComputeSkinMeshEntity", GLM_COLOR_CACHE);
 
                 _ComputeEntity(&entityData->data, entityData->data.inputGeoData._character, time);
                 if (!entityData->data.enabled)
