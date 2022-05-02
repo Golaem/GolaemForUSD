@@ -291,6 +291,49 @@ namespace glm
             , _factory(new crowdio::SimulationCacheFactory())
         {
             usdplugin::init();
+            _shaderAttrTypes.resize(ShaderAttributeType::END);
+            _shaderAttrDefaultValues.resize(ShaderAttributeType::END);
+            {
+                int intValue = 0;
+                VtValue value(intValue);
+                _shaderAttrTypes[ShaderAttributeType::INT] = SdfSchema::GetInstance().FindType(value).GetAsToken();
+                _shaderAttrDefaultValues[ShaderAttributeType::INT] = value;
+            }
+            {
+                float floatValue = 0.1f;
+                VtValue value(floatValue);
+                _shaderAttrTypes[ShaderAttributeType::FLOAT] = SdfSchema::GetInstance().FindType(value).GetAsToken();
+                _shaderAttrDefaultValues[ShaderAttributeType::FLOAT] = value;
+            }
+            {
+                TfToken stringValue;
+                VtValue value(stringValue);
+                _shaderAttrTypes[ShaderAttributeType::STRING] = SdfSchema::GetInstance().FindType(value).GetAsToken();
+                _shaderAttrDefaultValues[ShaderAttributeType::STRING] = value;
+            }
+            {
+                GfVec3f vectorValue;
+                VtValue value(vectorValue);
+                _shaderAttrTypes[ShaderAttributeType::VECTOR] = SdfSchema::GetInstance().FindType(value).GetAsToken();
+                _shaderAttrDefaultValues[ShaderAttributeType::VECTOR] = value;
+            }
+            // pp attributes have 2 possible types: float, vector
+            _ppAttrTypes.resize(2);
+            _ppAttrDefaultValues.resize(2);
+            {
+                float floatValue = 0.1f;
+                VtValue value(floatValue);
+                int attrTypeIdx = crowdio::GSC_PP_FLOAT - 1; // enum starts at 1
+                _ppAttrTypes[attrTypeIdx] = SdfSchema::GetInstance().FindType(value).GetAsToken();
+                _ppAttrDefaultValues[attrTypeIdx] = value;
+            }
+            {
+                GfVec3f vectorValue;
+                VtValue value(vectorValue);
+                int attrTypeIdx = crowdio::GSC_PP_VECTOR - 1; // enum starts at 1
+                _ppAttrTypes[attrTypeIdx] = SdfSchema::GetInstance().FindType(value).GetAsToken();
+                _ppAttrDefaultValues[attrTypeIdx] = value;
+            }
             _InitFromParams();
         }
 
@@ -1516,49 +1559,7 @@ namespace glm
             _shaderDataPerChar.resize(_factory->getGolaemCharacters().size());
             _snsIndicesPerChar.resize(_factory->getGolaemCharacters().size());
             glm::Array<VtTokenArray> jointsPerChar(_factory->getGolaemCharacters().size());
-            _shaderAttrTypes.resize(ShaderAttributeType::END);
-            _shaderAttrDefaultValues.resize(ShaderAttributeType::END);
-            {
-                int intValue = 0;
-                VtValue value(intValue);
-                _shaderAttrTypes[ShaderAttributeType::INT] = SdfSchema::GetInstance().FindType(value).GetAsToken();
-                _shaderAttrDefaultValues[ShaderAttributeType::INT] = value;
-            }
-            {
-                float floatValue = 0.1f;
-                VtValue value(floatValue);
-                _shaderAttrTypes[ShaderAttributeType::FLOAT] = SdfSchema::GetInstance().FindType(value).GetAsToken();
-                _shaderAttrDefaultValues[ShaderAttributeType::FLOAT] = value;
-            }
-            {
-                TfToken stringValue;
-                VtValue value(stringValue);
-                _shaderAttrTypes[ShaderAttributeType::STRING] = SdfSchema::GetInstance().FindType(value).GetAsToken();
-                _shaderAttrDefaultValues[ShaderAttributeType::STRING] = value;
-            }
-            {
-                GfVec3f vectorValue;
-                VtValue value(vectorValue);
-                _shaderAttrTypes[ShaderAttributeType::VECTOR] = SdfSchema::GetInstance().FindType(value).GetAsToken();
-                _shaderAttrDefaultValues[ShaderAttributeType::VECTOR] = value;
-            }
-            // pp attributes have 2 possible types: float, vector
-            _ppAttrTypes.resize(2);
-            _ppAttrDefaultValues.resize(2);
-            {
-                float floatValue = 0.1f;
-                VtValue value(floatValue);
-                int attrTypeIdx = crowdio::GSC_PP_FLOAT - 1; // enum starts at 1
-                _ppAttrTypes[attrTypeIdx] = SdfSchema::GetInstance().FindType(value).GetAsToken();
-                _ppAttrDefaultValues[attrTypeIdx] = value;
-            }
-            {
-                GfVec3f vectorValue;
-                VtValue value(vectorValue);
-                int attrTypeIdx = crowdio::GSC_PP_VECTOR - 1; // enum starts at 1
-                _ppAttrTypes[attrTypeIdx] = SdfSchema::GetInstance().FindType(value).GetAsToken();
-                _ppAttrDefaultValues[attrTypeIdx] = value;
-            }
+            
             glm::PODArray<int> intAttrCounters(_factory->getGolaemCharacters().size(), 0);
             glm::PODArray<int> floatAttrCounters(_factory->getGolaemCharacters().size(), 0);
             glm::PODArray<int> stringAttrCounters(_factory->getGolaemCharacters().size(), 0);
