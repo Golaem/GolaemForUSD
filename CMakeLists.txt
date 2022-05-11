@@ -245,15 +245,6 @@ else()
         file( WRITE "${PLUGININFO_PATH_${configuration}}" "${PLUGININFO_PATH_CONTENTS_${configuration}}" )
         install( FILES "${PLUGININFO_PATH_${configuration}}" CONFIGURATIONS ${configuration} DESTINATION "${CROWD_INSTALL_PATH_${configuration}}/${USD_PROC_INSTALL_DIR}" )      # install plugInfo file
     endforeach()
-
-    # install python boost when is USD build only and MSVC-
-    if(NOT BUILD_USD_HOUDINI AND NOT BUILD_USD_KATANA AND BUILD_USD AND MSVC)
-        find_file(USDPYTHONBOOSTLIB NAMES boost_python-vc140-mt-1_61.dll boost_python-vc140-mt-1_65_1.dll boost_python38-vc141-mt-x64-1_70.dll PATHS ${GLMUSD_EXTERNALS_PATH}/lib REQUIRED)
-        foreach( configuration "Debug" "Release" )
-            install( FILES "${USDPYTHONBOOSTLIB}" CONFIGURATIONS ${configuration} DESTINATION "${CROWD_INSTALL_PATH_${configuration}}/bin" )
-        endforeach()
-        unset(USDPYTHONBOOSTLIB CACHE)
-    endif()
-
+    
     unset( CROWD_INSTALL_SKIP_DEBUG )
 endif()
