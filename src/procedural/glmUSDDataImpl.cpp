@@ -1193,7 +1193,6 @@ namespace glm
             const TfToken& nameToken = path.GetNameToken();
 
             bool isEntityPath = true;
-            bool isMeshPath = false;
             EntityVolatileData* entityVolatileData = NULL;
             const EntityData* genericEntityData = NULL;
             if (_params.glmDisplayMode == GolaemDisplayMode::SKELETON)
@@ -1264,7 +1263,6 @@ namespace glm
                 genericEntityData = entityData;
 
                 isEntityPath = meshData == NULL;
-                isMeshPath = meshData != NULL;
 
                 if (meshData == NULL)
                 {
@@ -1834,7 +1832,7 @@ namespace glm
                     std::vector<TfToken>& entityChildNames = _primChildNames[entityPath];
                     if (displayMode == GolaemDisplayMode::SKELETON)
                     {
-                        if (characterIdx < usdCharacterFilesList.size())
+                        if (characterIdx < usdCharacterFilesList.sizeInt())
                         {
                             const glm::GlmString& usdCharacterFile = usdCharacterFilesList[characterIdx];
                             skelEntityData->data.referencedUsdCharacter.SetAppendedItems({SdfReference(usdCharacterFile.c_str())});
