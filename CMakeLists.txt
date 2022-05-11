@@ -248,7 +248,7 @@ else()
 
     # install python boost when is USD build only and MSVC-
     if(NOT BUILD_USD_HOUDINI AND NOT BUILD_USD_KATANA AND BUILD_USD AND MSVC)
-        find_file(USDPYTHONBOOSTLIB NAMES boost_python-vc140-mt-1_61.dll boost_python-vc140-mt-1_65_1.dll PATHS ${GLMUSD_EXTERNALS_PATH}/lib REQUIRED)
+        find_file(USDPYTHONBOOSTLIB NAMES boost_python-vc140-mt-1_61.dll boost_python-vc140-mt-1_65_1.dll boost_python38-vc141-mt-x64-1_70.dll PATHS ${GLMUSD_EXTERNALS_PATH}/lib REQUIRED)
         foreach( configuration "Debug" "Release" )
             install( FILES "${USDPYTHONBOOSTLIB}" CONFIGURATIONS ${configuration} DESTINATION "${CROWD_INSTALL_PATH_${configuration}}/bin" )
         endforeach()
