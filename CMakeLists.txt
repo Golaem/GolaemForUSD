@@ -203,10 +203,11 @@ else()
             sdf
             tf
             usd
+            usdGeom
             vt
         )
     else()
-        target_link_libraries( ${PROJECT_NAME} usd)
+        target_link_libraries( ${PROJECT_NAME} usd usdGeom)
     endif()
 
     # cannot compile debug - windows or linux
