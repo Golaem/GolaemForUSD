@@ -66,7 +66,7 @@ if(GOLAEMUSD_STANDALONE_BUILD)
 
     set( CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cfg/cmake")
     
-    find_package(Python REQUIRED)
+    find_package(PythonLibs REQUIRED)
     find_package(FbxSdk REQUIRED)
     find_package(USD REQUIRED)
    
@@ -97,7 +97,7 @@ if(GOLAEMUSD_STANDALONE_BUILD)
     target_link_libraries( ${PROJECT_NAME} ${PYTHON_LIBS})
     target_link_libraries( ${PROJECT_NAME} ${FBXSDK_LIBS})
     target_link_libraries(${PROJECT_NAME} ${GOLAEMDEVKIT_LIBS} )
-    target_link_libraries( ${PROJECT_NAME} usd)
+    target_link_libraries( ${PROJECT_NAME} usd usdGeom)
 
     # cannot compile debug - windows or linux 
     set( CROWD_INSTALL_SKIP_DEBUG ON )
