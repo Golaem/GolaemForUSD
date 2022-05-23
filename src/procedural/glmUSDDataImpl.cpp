@@ -10,6 +10,7 @@ USD_INCLUDES_START
 #include <pxr/pxr.h>
 #include <pxr/usd/sdf/schema.h>
 #include <pxr/usd/sdf/reference.h>
+#include <pxr/usd/usdGeom/tokens.h>
 USD_INCLUDES_END
 
 #include <glmCore.h>
@@ -39,16 +40,6 @@ namespace glm
 #endif
         // clang-format off
         // Define tokens for the property names we know about from usdGeom
-
-        TF_DEFINE_PRIVATE_TOKENS(
-            _geomCommonTokens,      
-            (inherited)             
-            (faceVarying)           
-            (rightHanded)           
-            (none)                   
-            (interpolation)        
-            (invisible)
-        );
 
         TF_DEFINE_PRIVATE_TOKENS(
             _skinMeshEntityPropertyTokens,
@@ -139,7 +130,7 @@ namespace glm
             (*_skinMeshEntityProperties)[_skinMeshEntityPropertyTokens->displayColor].defaultValue = VtValue(VtVec3fArray({GfVec3f(1, 0.5, 0)}));
             (*_skinMeshEntityProperties)[_skinMeshEntityPropertyTokens->displayColor].isAnimated = false;
 
-            (*_skinMeshEntityProperties)[_skinMeshEntityPropertyTokens->visibility].defaultValue = VtValue(_geomCommonTokens->inherited);
+            (*_skinMeshEntityProperties)[_skinMeshEntityPropertyTokens->visibility].defaultValue = VtValue(UsdGeomTokens->inherited);
 
             (*_skinMeshEntityProperties)[_skinMeshEntityPropertyTokens->entityId].defaultValue = VtValue(int64_t(-1));
             (*_skinMeshEntityProperties)[_skinMeshEntityPropertyTokens->entityId].isAnimated = false;
@@ -159,7 +150,7 @@ namespace glm
 
             // Define the default value types for our animated properties.
 
-            (*_skelEntityProperties)[_skelEntityPropertyTokens->visibility].defaultValue = VtValue(_geomCommonTokens->inherited);
+            (*_skelEntityProperties)[_skelEntityPropertyTokens->visibility].defaultValue = VtValue(UsdGeomTokens->inherited);
 
             (*_skelEntityProperties)[_skelEntityPropertyTokens->entityId].defaultValue = VtValue(int64_t(-1));
             (*_skelEntityProperties)[_skelEntityPropertyTokens->entityId].isAnimated = false;
@@ -181,10 +172,10 @@ namespace glm
 
             (*_skinMeshProperties)[_skinMeshPropertyTokens->normals].defaultValue = VtValue(VtVec3fArray());
             (*_skinMeshProperties)[_skinMeshPropertyTokens->normals].hasInterpolation = true;
-            (*_skinMeshProperties)[_skinMeshPropertyTokens->normals].interpolation = _geomCommonTokens->faceVarying;
+            (*_skinMeshProperties)[_skinMeshPropertyTokens->normals].interpolation = UsdGeomTokens->faceVarying;
 
             // set the subdivision scheme to none in order to take normals into account
-            (*_skinMeshProperties)[_skinMeshPropertyTokens->subdivisionScheme].defaultValue = _geomCommonTokens->none;
+            (*_skinMeshProperties)[_skinMeshPropertyTokens->subdivisionScheme].defaultValue = UsdGeomTokens->none;
             (*_skinMeshProperties)[_skinMeshPropertyTokens->subdivisionScheme].isAnimated = false;
 
             (*_skinMeshProperties)[_skinMeshPropertyTokens->faceVertexCounts].defaultValue = VtValue(VtIntArray());
@@ -195,9 +186,9 @@ namespace glm
             (*_skinMeshProperties)[_skinMeshPropertyTokens->uvs].defaultValue = VtValue(VtVec2fArray());
             (*_skinMeshProperties)[_skinMeshPropertyTokens->uvs].isAnimated = false;
             (*_skinMeshProperties)[_skinMeshPropertyTokens->uvs].hasInterpolation = true;
-            (*_skinMeshProperties)[_skinMeshPropertyTokens->uvs].interpolation = _geomCommonTokens->faceVarying;
+            (*_skinMeshProperties)[_skinMeshPropertyTokens->uvs].interpolation = UsdGeomTokens->faceVarying;
 
-            (*_skinMeshProperties)[_skinMeshPropertyTokens->orientation].defaultValue = VtValue(_geomCommonTokens->rightHanded);
+            (*_skinMeshProperties)[_skinMeshPropertyTokens->orientation].defaultValue = VtValue(UsdGeomTokens->rightHanded);
             (*_skinMeshProperties)[_skinMeshPropertyTokens->orientation].isAnimated = false;
 
             // Use the schema to derive the type name tokens from each property's
@@ -471,7 +462,7 @@ namespace glm
                 {
                     return _HasPropertyDefaultValue(path, value);
                 }
-                else if (field == _geomCommonTokens->interpolation)
+                else if (field == UsdGeomTokens->interpolation)
                 {
                     return _HasPropertyInterpolation(path, value);
                 }
@@ -880,11 +871,11 @@ namespace glm
                     {SdfFieldKeys->TypeName,
                      SdfFieldKeys->Default,
                      SdfFieldKeys->TimeSamples,
-                     _geomCommonTokens->interpolation});
+                     UsdGeomTokens->interpolation});
                 static std::vector<TfToken> nonAnimInterpPropFields(
                     {SdfFieldKeys->TypeName,
                      SdfFieldKeys->Default,
-                     _geomCommonTokens->interpolation});
+                     UsdGeomTokens->interpolation});
                 static std::vector<TfToken> relationshipFields(
                     {SdfFieldKeys->TargetPaths});
                 {
@@ -1223,7 +1214,7 @@ namespace glm
                     // this is an entity node
                     if (nameToken == _skelEntityPropertyTokens->visibility)
                     {
-                        RETURN_TRUE_WITH_OPTIONAL_VALUE(entityData->data.enabled ? _geomCommonTokens->inherited : _geomCommonTokens->invisible);
+                        RETURN_TRUE_WITH_OPTIONAL_VALUE(entityData->data.enabled ? UsdGeomTokens->inherited : UsdGeomTokens->invisible);
                     }
                 }
                 else
@@ -1274,7 +1265,7 @@ namespace glm
                     }
                     if (nameToken == _skinMeshEntityPropertyTokens->visibility)
                     {
-                        RETURN_TRUE_WITH_OPTIONAL_VALUE(entityData->data.enabled ? _geomCommonTokens->inherited : _geomCommonTokens->invisible);
+                        RETURN_TRUE_WITH_OPTIONAL_VALUE(entityData->data.enabled ? UsdGeomTokens->inherited : UsdGeomTokens->invisible);
                     }
                 }
                 else
@@ -2419,7 +2410,7 @@ namespace glm
                         {
                             if (nameToken == _skelEntityPropertyTokens->visibility)
                             {
-                                *value = VtValue(entityData->data.enabled ? _geomCommonTokens->inherited : _geomCommonTokens->invisible);
+                                *value = VtValue(entityData->data.enabled ? UsdGeomTokens->inherited : UsdGeomTokens->invisible);
                             }
                             else if (nameToken == _skelEntityPropertyTokens->entityId)
                             {
@@ -2525,7 +2516,7 @@ namespace glm
                             }
                             else if (nameToken == _skinMeshEntityPropertyTokens->visibility)
                             {
-                                *value = VtValue(entityData->data.enabled ? _geomCommonTokens->inherited : _geomCommonTokens->invisible);
+                                *value = VtValue(entityData->data.enabled ? UsdGeomTokens->inherited : UsdGeomTokens->invisible);
                             }
                             else if (nameToken == _skinMeshEntityPropertyTokens->entityId)
                             {
