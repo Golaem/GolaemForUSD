@@ -38,14 +38,6 @@ namespace glm
             };
         };
 
-        struct CharacterShaderData
-        {
-            std::map<size_t, size_t> _globalToIntShaderAttrIdx;
-            std::map<size_t, size_t> _globalToFloatShaderAttrIdx;
-            std::map<size_t, size_t> _globalToStringShaderAttrIdx;
-            std::map<size_t, size_t> _globalToVectorShaderAttrIdx;
-        };
-
         class GolaemUSD_DataImpl
         {
         private:
@@ -55,8 +47,8 @@ namespace glm
                 bool excluded = false; // excluded by layout - the entity will always be empty
                 bool enabled = true;   // can vary during simulation (kill, emit)
                 uint32_t bonePositionOffset = 0;
-                glm::SpinLock* cachedSimulationLock = NULL;
-                glm::SpinLock entityComputeLock; // do not allow simultaneous computes of the same entity
+                glm::Mutex* cachedSimulationLock = NULL;
+                glm::Mutex entityComputeLock; // do not allow simultaneous computes of the same entity
 
                 glm::PODArray<int> intShaderAttrValues;
                 glm::PODArray<float> floatShaderAttrValues;
@@ -138,7 +130,6 @@ namespace glm
 
             crowdio::SimulationCacheFactory* _factory;
             glm::Array<glm::PODArray<int>> _sgToSsPerChar;
-            glm::Array<CharacterShaderData> _shaderDataPerChar;
             glm::Array<PODArray<int>> _snsIndicesPerChar;
 
             glm::Array<GlmString> _shaderAttrTypes;
@@ -170,7 +161,7 @@ namespace glm
 
             TfHashMap<SdfPath, SkelAnimData, SdfPath::Hash> _skelAnimDataMap;
 
-            mutable glm::Array<glm::SpinLock> _cachedSimulationLocks;
+            mutable glm::Array<glm::Mutex> _cachedSimulationLocks;
 
         public:
             GolaemUSD_DataImpl(const GolaemUSD_DataParams& params);
