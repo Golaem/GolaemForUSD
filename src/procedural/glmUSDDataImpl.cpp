@@ -1310,48 +1310,40 @@ namespace glm
                 {
                     if (value)
                     {
-                        const CharacterShaderData& charShaderData = _shaderDataPerChar[entityVolatileData->inputGeoData._characterIdx];
                         const glm::ShaderAttribute& shaderAttr = entityVolatileData->inputGeoData._character->_shaderAttributes[*shaderAttrIdx];
-                        switch (shaderAttr._type)
+                        const glm::ShaderAssetDataContainer* shaderDataContainer = NULL;
                         {
-                        case glm::ShaderAttributeType::INT:
-                        {
-                            const size_t* intAttrIdx = TfMapLookupPtr(charShaderData._globalToIntShaderAttrIdx, *shaderAttrIdx);
-                            if (intAttrIdx != NULL)
-                            {
-                                *value = VtValue(entityVolatileData->intShaderAttrValues[*intAttrIdx]);
-                            }
+                            glm::ScopedLock<glm::Mutex> cachedSimuLock(*entityVolatileData->cachedSimulationLock);
+                            shaderDataContainer = entityVolatileData->cachedSimulation->getFinalShaderData(time, UINT32_MAX, true);
                         }
-                        break;
-                        case glm::ShaderAttributeType::FLOAT:
+                        if (shaderDataContainer != NULL)
                         {
-                            const size_t* floatAttrIdx = TfMapLookupPtr(charShaderData._globalToFloatShaderAttrIdx, *shaderAttrIdx);
-                            if (floatAttrIdx != NULL)
+                            size_t specificAttrIdx = shaderDataContainer->globalToSpecificShaderAttrIdxPerChar[entityVolatileData->inputGeoData._characterIdx][*shaderAttrIdx];
+                            switch (shaderAttr._type)
                             {
-                                *value = VtValue(entityVolatileData->floatShaderAttrValues[*floatAttrIdx]);
-                            }
-                        }
-                        break;
-                        case glm::ShaderAttributeType::STRING:
-                        {
-                            const size_t* stringAttrIdx = TfMapLookupPtr(charShaderData._globalToStringShaderAttrIdx, *shaderAttrIdx);
-                            if (stringAttrIdx != NULL)
+                            case glm::ShaderAttributeType::INT:
                             {
-                                *value = VtValue(entityVolatileData->stringShaderAttrValues[*stringAttrIdx]);
+                                *value = VtValue(entityVolatileData->intShaderAttrValues[specificAttrIdx]);
                             }
-                        }
-                        break;
-                        case glm::ShaderAttributeType::VECTOR:
-                        {
-                            const size_t* vectorAttrIdx = TfMapLookupPtr(charShaderData._globalToVectorShaderAttrIdx, *shaderAttrIdx);
-                            if (vectorAttrIdx != NULL)
-                            {
-                                *value = VtValue(entityVolatileData->vectorShaderAttrValues[*vectorAttrIdx]);
-                            }
-                        }
-                        break;
-                        default:
                             break;
+                            case glm::ShaderAttributeType::FLOAT:
+                            {
+                                *value = VtValue(entityVolatileData->floatShaderAttrValues[specificAttrIdx]);
+                            }
+                            break;
+                            case glm::ShaderAttributeType::STRING:
+                            {
+                                *value = VtValue(entityVolatileData->stringShaderAttrValues[specificAttrIdx]);
+                            }
+                            break;
+                            case glm::ShaderAttributeType::VECTOR:
+                            {
+                                *value = VtValue(entityVolatileData->vectorShaderAttrValues[specificAttrIdx]);
+                            }
+                            break;
+                            default:
+                                break;
+                            }
                         }
                     }
                     return true;
@@ -1545,14 +1537,8 @@ namespace glm
             std::vector<TfToken>& rootChildNames = _primChildNames[_GetRootPrimPath()];
 
             _sgToSsPerChar.resize(_factory->getGolaemCharacters().size());
-            _shaderDataPerChar.resize(_factory->getGolaemCharacters().size());
             _snsIndicesPerChar.resize(_factory->getGolaemCharacters().size());
             glm::Array<VtTokenArray> jointsPerChar(_factory->getGolaemCharacters().size());
-            
-            glm::PODArray<int> intAttrCounters(_factory->getGolaemCharacters().size(), 0);
-            glm::PODArray<int> floatAttrCounters(_factory->getGolaemCharacters().size(), 0);
-            glm::PODArray<int> stringAttrCounters(_factory->getGolaemCharacters().size(), 0);
-            glm::PODArray<int> vectorAttrCounters(_factory->getGolaemCharacters().size(), 0);
             for (int iChar = 0, charCount = _factory->getGolaemCharacters().sizeInt(); iChar < charCount; ++iChar)
             {
                 const glm::GolaemCharacter* character = _factory->getGolaemCharacter(iChar);
@@ -1593,46 +1579,6 @@ namespace glm
                         boneNameWithHierarchy = TfMakeValidIdentifier(parentBone->getName().c_str()) + "/" + boneNameWithHierarchy;
                     }
                     characterJoints[iBone] = TfToken(boneNameWithHierarchy.c_str());
-                }
-
-                CharacterShaderData& charShaderData = _shaderDataPerChar[iChar];
-                int& intAttrCounter = intAttrCounters[iChar];
-                int& floatAttrCounter = floatAttrCounters[iChar];
-                int& stringAttrCounter = stringAttrCounters[iChar];
-                int& vectorAttrCounter = vectorAttrCounters[iChar];
-                for (size_t iShaderAttr = 0, shaderAttrCount = character->_shaderAttributes.size(); iShaderAttr < shaderAttrCount; ++iShaderAttr)
-                {
-                    const glm::ShaderAttribute& shaderAttr = character->_shaderAttributes[iShaderAttr];
-                    switch (shaderAttr._type)
-                    {
-                    case glm::ShaderAttributeType::INT:
-                    {
-                        charShaderData._globalToIntShaderAttrIdx[iShaderAttr] = intAttrCounter;
-                        ++intAttrCounter;
-                    }
-                    break;
-                    case glm::ShaderAttributeType::FLOAT:
-                    {
-                        charShaderData._globalToFloatShaderAttrIdx[iShaderAttr] = floatAttrCounter;
-                        ++floatAttrCounter;
-                    }
-                    break;
-                    case glm::ShaderAttributeType::STRING:
-                    {
-
-                        charShaderData._globalToStringShaderAttrIdx[iShaderAttr] = stringAttrCounter;
-                        ++stringAttrCounter;
-                    }
-                    break;
-                    case glm::ShaderAttributeType::VECTOR:
-                    {
-                        charShaderData._globalToVectorShaderAttrIdx[iShaderAttr] = vectorAttrCounter;
-                        ++vectorAttrCounter;
-                    }
-                    break;
-                    default:
-                        break;
-                    }
                 }
             }
             TfToken skelAnimName("SkelAnim");
@@ -1682,9 +1628,10 @@ namespace glm
 
                 // compute assets if needed
                 const glm::Array<glm::PODArray<int>>& entityAssets = cachedSimulation.getFinalEntityAssets(firstFrameInCache);
+                const glm::ShaderAssetDataContainer* shaderDataContainer = cachedSimulation.getFinalShaderData(firstFrameInCache, UINT32_MAX, true);
 
                 // create lock for cached simulation
-                glm::SpinLock& cachedSimulationLock = _cachedSimulationLocks[iCf];
+                glm::Mutex& cachedSimulationLock = _cachedSimulationLocks[iCf];
 
                 size_t maxEntities = (size_t)floorf(simuData->_entityCount * renderPercent);
                 for (uint32_t iEntity = 0; iEntity < simuData->_entityCount; ++iEntity)
@@ -1759,10 +1706,10 @@ namespace glm
                         continue;
                     }
 
-                    volatileData->intShaderAttrValues.resize(intAttrCounters[characterIdx], 0);
-                    volatileData->floatShaderAttrValues.resize(floatAttrCounters[characterIdx], 0);
-                    volatileData->stringShaderAttrValues.resize(stringAttrCounters[characterIdx]);
-                    volatileData->vectorShaderAttrValues.resize(vectorAttrCounters[characterIdx], GfVec3f(0));
+                    volatileData->intShaderAttrValues.resize(shaderDataContainer->specificShaderAttrCountersPerChar[characterIdx][glm::ShaderAttributeType::INT], 0);
+                    volatileData->floatShaderAttrValues.resize(shaderDataContainer->specificShaderAttrCountersPerChar[characterIdx][glm::ShaderAttributeType::FLOAT], 0);
+                    volatileData->stringShaderAttrValues.resize(shaderDataContainer->specificShaderAttrCountersPerChar[characterIdx][glm::ShaderAttributeType::STRING]);
+                    volatileData->vectorShaderAttrValues.resize(shaderDataContainer->specificShaderAttrCountersPerChar[characterIdx][glm::ShaderAttributeType::VECTOR], GfVec3f(0));
 
                     // add pp attributes
                     size_t ppAttrIdx = 0;
@@ -2928,7 +2875,7 @@ namespace glm
         //-----------------------------------------------------------------------------
         void GolaemUSD_DataImpl::_ComputeSkelEntity(const SkelEntityData* entityData, double time) const
         {
-            glm::ScopedLock<glm::SpinLock> entityComputeLock(entityData->data.entityComputeLock);
+            glm::ScopedLock<glm::Mutex> entityComputeLock(entityData->data.entityComputeLock);
             if (entityData->data.computedTimeSample != time)
             {
                 ZoneScopedNC("ComputeSkelEntity", GLM_COLOR_CACHE);
@@ -3055,7 +3002,7 @@ namespace glm
             const glm::crowdio::GlmFrameData* frameData = NULL;
             const glm::ShaderAssetDataContainer* shaderDataContainer = NULL;
             {
-                glm::ScopedLock<glm::SpinLock> cachedSimuLock(*entityData->cachedSimulationLock);
+                glm::ScopedLock<glm::Mutex> cachedSimuLock(*entityData->cachedSimulationLock);
                 frameData = entityData->cachedSimulation->getFinalFrameData(time, UINT32_MAX, true);
                 shaderDataContainer = entityData->cachedSimulation->getFinalShaderData(time, UINT32_MAX, true);
             }
@@ -3072,42 +3019,39 @@ namespace glm
                 return;
             }
 
-            int intAttrCounter = 0;
-            int floatAttrCounter = 0;
-            int stringAttrCounter = 0;
-            int vectorAttrCounter = 0;
+            const glm::PODArray<int>& entityIntShaderData = shaderDataContainer->intData[entityData->inputGeoData._entityIndex];
+            const glm::PODArray<float>& entityFloatShaderData = shaderDataContainer->floatData[entityData->inputGeoData._entityIndex];
+            const glm::Array<glm::Vector3>& entityVectorShaderData = shaderDataContainer->vectorData[entityData->inputGeoData._entityIndex];
+            const glm::Array<glm::GlmString>& entityStringShaderData = shaderDataContainer->stringData[entityData->inputGeoData._entityIndex];
+
+            const PODArray<size_t>& globalToSpecificShaderAttrIdx = shaderDataContainer->globalToSpecificShaderAttrIdxPerChar[entityData->inputGeoData._characterIdx];
+
             // compute shader data
-            const glm::Array<glm::GlmString>& shaderData = shaderDataContainer->data[entityData->inputGeoData._entityIndex];
             glm::Vector3 vectValue;
-            for (size_t iShaderAttr = 0, shaderAttrCount = character->_shaderAttributes.size(); iShaderAttr < shaderAttrCount; iShaderAttr++)
+            for (size_t iShaderAttr = 0, shaderAttrCount = character->_shaderAttributes.size(); iShaderAttr < shaderAttrCount; ++iShaderAttr)
             {
-                const glm::GlmString& attrValueStr = shaderData[iShaderAttr];
-                const glm::ShaderAttribute& shaderAttr = character->_shaderAttributes[iShaderAttr];
-                switch (shaderAttr._type)
+                const glm::ShaderAttribute& shaderAttribute = character->_shaderAttributes[iShaderAttr];
+                size_t specificAttrIdx = globalToSpecificShaderAttrIdx[iShaderAttr];
+                switch (shaderAttribute._type)
                 {
                 case glm::ShaderAttributeType::INT:
                 {
-                    glm::fromString<int>(attrValueStr, entityData->intShaderAttrValues[intAttrCounter]);
-                    ++intAttrCounter;
+                    entityData->intShaderAttrValues[specificAttrIdx] = entityIntShaderData[specificAttrIdx];
                 }
                 break;
                 case glm::ShaderAttributeType::FLOAT:
                 {
-                    glm::fromString<float>(attrValueStr, entityData->floatShaderAttrValues[floatAttrCounter]);
-                    ++floatAttrCounter;
+                    entityData->floatShaderAttrValues[specificAttrIdx] = entityFloatShaderData[specificAttrIdx];
                 }
                 break;
                 case glm::ShaderAttributeType::STRING:
                 {
-                    entityData->stringShaderAttrValues[stringAttrCounter] = TfToken(attrValueStr.c_str());
-                    ++stringAttrCounter;
+                    entityData->stringShaderAttrValues[specificAttrIdx] = TfToken(entityStringShaderData[specificAttrIdx].c_str());
                 }
                 break;
                 case glm::ShaderAttributeType::VECTOR:
                 {
-                    glm::fromString(attrValueStr, vectValue);
-                    entityData->vectorShaderAttrValues[vectorAttrCounter].Set(vectValue.getFloatValues());
-                    ++vectorAttrCounter;
+                    entityData->vectorShaderAttrValues[specificAttrIdx].Set(entityVectorShaderData[specificAttrIdx].getFloatValues());
                 }
                 break;
                 default:
@@ -3136,7 +3080,7 @@ namespace glm
         void GolaemUSD_DataImpl::_ComputeSkinMeshEntity(const SkinMeshEntityData* entityData, double time) const
         {
             // check if computation is needed
-            glm::ScopedLock<glm::SpinLock> entityComputeLock(entityData->data.entityComputeLock);
+            glm::ScopedLock<glm::Mutex> entityComputeLock(entityData->data.entityComputeLock);
             if (entityData->data.computedTimeSample != time)
             {
                 entityData->data.computedTimeSample = time;
