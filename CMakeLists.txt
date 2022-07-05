@@ -104,6 +104,11 @@ if(GOLAEMUSD_STANDALONE_BUILD)
 
     if(MSVC)
         target_compile_options(${PROJECT_NAME} PRIVATE "-DNOMINMAX" "/MP" "/nologo" "/wd4251")
+
+        if(MSVC_VERSION GREATER_EQUAL 1920)
+            # from https://github.com/PixarAnimationStudios/USD/issues/1279
+            target_compile_options(${PROJECT_NAME} PRIVATE "/Zc:inline-")
+        endif()
     else()
         # flags needed for some usd includes (that use hash_set)
         target_compile_options(${PROJECT_NAME} PRIVATE "-Wno-deprecated")
@@ -220,7 +225,12 @@ else()
 
     crowd_load_dependencies( ${PROJECT_NAME} )
 
-    if( CMAKE_COMPILER_IS_GNUCC )
+    if(MSVC)
+        if(MSVC_VERSION GREATER_EQUAL 1920)
+            # from https://github.com/PixarAnimationStudios/USD/issues/1279
+            target_compile_options(${PROJECT_NAME} PRIVATE "/Zc:inline-")
+        endif()
+    else()
         # flags needed for some usd includes (that use hash_set)
         target_compile_options(${PROJECT_NAME} PRIVATE "-Wno-deprecated")
     endif()
