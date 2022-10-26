@@ -1585,6 +1585,7 @@ namespace glm
             TfToken animationsGroupName("Animations");
             GlmString meshVariantEnable("Enable");
             glm::Array<glm::GlmString> entityMeshNames;
+            glm::Array<glm::GlmString> entityMeshAliases;
             SdfPath animationsGroupPath;
             std::vector<TfToken>* animationsChildNames = NULL;
             _cachedSimulationLocks.resize(crowdFieldNames.size());
@@ -1785,7 +1786,7 @@ namespace glm
                         skelEntityData->skeletonPath = SdfPathListOp::CreateExplicit({skeletonPath});
 
                         // compute mesh names
-                        _ComputeEntityMeshNames(entityMeshNames, skelEntityData);
+                        _ComputeEntityMeshNames(entityMeshNames, entityMeshAliases, skelEntityData);
 
                         // fill skel animation data
                         SkelAnimData& animData = _skelAnimDataMap[animationSourcePath];
@@ -1819,16 +1820,32 @@ namespace glm
                     else
                     {
                         glm::crowdio::OutputEntityGeoData outputData; // TODO: see if storage is better
-                        _ComputeEntityMeshNames(entityMeshNames, outputData, skinMeshEntityData);
+                        _ComputeEntityMeshNames(entityMeshNames, entityMeshAliases, outputData, skinMeshEntityData);
 
+
+                        GlmMap< GlmString, SdfPath> meshTreeSdfPaths;
                         size_t meshCount = entityMeshNames.size();
                         for (size_t iMesh = 0; iMesh < meshCount; ++iMesh)
                         {
-                            TfToken meshName(TfMakeValidIdentifier(entityMeshNames[iMesh].c_str()).c_str());
-                            SdfPath meshPath = entityPath.AppendChild(meshName);
-                            _primSpecPaths.insert(meshPath);
-                            entityChildNames.push_back(meshName);
-                            SkinMeshData& meshData = _skinMeshDataMap[meshPath];
+                            // create USD arborescence based on alias export per mesh data
+                            SdfPath lastMeshTransformPath = entityPath;
+                            GlmString meshAlias(entityMeshAliases[iMesh]);
+                            GlmString meshName(entityMeshNames[iMesh]);
+                            
+                            size_t lastPipe = meshAlias.find_last_of('|');
+                            if (lastPipe != GlmString::npos && lastPipe != meshAlias.size() - 1)
+                            {
+                                GlmString hierarchyWithoutName = meshAlias.substr(0, lastPipe);
+                                lastMeshTransformPath = _CreateHierarchyFor(hierarchyWithoutName, entityPath, meshTreeSdfPaths);
+                                meshName = meshAlias.substr(lastPipe + 1);
+                            }
+
+                            TfToken meshNameTk(TfMakeValidIdentifier(meshName.c_str()).c_str());
+                            SdfPath meshSdfPath = lastMeshTransformPath.AppendChild(meshNameTk);
+                            _primSpecPaths.insert(meshSdfPath);
+                            _primChildNames[lastMeshTransformPath].push_back(meshNameTk);
+
+                            SkinMeshData& meshData = _skinMeshDataMap[meshSdfPath];
                             meshData.entityData = skinMeshEntityData;
                             skinMeshEntityData->data.meshData.push_back(&meshData);
                         }
@@ -2818,7 +2835,7 @@ namespace glm
         }
 
         //-----------------------------------------------------------------------------
-        void GolaemUSD_DataImpl::_ComputeEntityMeshNames(glm::Array<glm::GlmString>& meshNames, glm::crowdio::OutputEntityGeoData& outputData, const SkinMeshEntityData* entityData) const
+        void GolaemUSD_DataImpl::_ComputeEntityMeshNames(glm::Array<glm::GlmString>& meshNames, glm::Array<glm::GlmString>& meshAliases, glm::crowdio::OutputEntityGeoData& outputData, const SkinMeshEntityData* entityData) const
         {
             meshNames.clear();
             GolaemDisplayMode::Value displayMode = (GolaemDisplayMode::Value)_params.glmDisplayMode;
@@ -2827,6 +2844,7 @@ namespace glm
             case glm::usdplugin::GolaemDisplayMode::BOUNDING_BOX:
             {
                 meshNames.push_back("BBOX");
+                meshAliases.push_back("");
             }
             break;
             case glm::usdplugin::GolaemDisplayMode::SKINMESH:
@@ -2838,10 +2856,13 @@ namespace glm
                 {
                     size_t meshCount = outputData._meshAssetNameIndices.size();
                     meshNames.resize(meshCount);
+                    meshAliases.resize(meshCount);
                     for (size_t iRenderMesh = 0; iRenderMesh < meshCount; ++iRenderMesh)
                     {
                         glm::GlmString& meshName = meshNames[iRenderMesh];
+                        glm::GlmString& meshAlias = meshAliases[iRenderMesh];
                         meshName = outputData._meshAssetNames[outputData._meshAssetNameIndices[iRenderMesh]];
+                        meshAlias = outputData._meshAssetAliases[outputData._meshAssetNameIndices[iRenderMesh]];
                         int materialIdx = outputData._meshAssetMaterialIndices[iRenderMesh];
                         if (materialIdx != 0)
                         {
@@ -2857,7 +2878,7 @@ namespace glm
         }
 
         //-----------------------------------------------------------------------------
-        void GolaemUSD_DataImpl::_ComputeEntityMeshNames(glm::Array<glm::GlmString>& meshNames, const SkelEntityData* entityData) const
+        void GolaemUSD_DataImpl::_ComputeEntityMeshNames(glm::Array<glm::GlmString>& meshNames, glm::Array<glm::GlmString>& meshAliases, const SkelEntityData* entityData) const
         {
             glm::PODArray<int> furAssetIds;
             glm::PODArray<size_t> meshAssetNameIndices;
@@ -2867,9 +2888,50 @@ namespace glm
                 entityData->data.inputGeoData._entityId,
                 *entityData->data.inputGeoData._assets,
                 meshNames,
+                meshAliases,
                 furAssetIds,
                 meshAssetNameIndices,
                 meshAssetMaterialIndices);
+        }
+
+        //-----------------------------------------------------------------------------
+        SdfPath GolaemUSD_DataImpl::_CreateHierarchyFor(const glm::GlmString& hierarchy, SdfPath& parentPath, GlmMap< GlmString, SdfPath>& existingPaths)
+        {
+            if (hierarchy.empty())
+                return parentPath;
+
+            // split last Group, find its parent and add this asset group xform
+            size_t firstSlash = hierarchy.find_first_of('|');
+            GlmString thisGroup = hierarchy.substr(0, firstSlash);
+            GlmString childrenGroupsHierarchy("");
+            if (firstSlash != GlmString::npos) childrenGroupsHierarchy = hierarchy.substr(firstSlash + 1);
+
+            // create this group path
+            SdfPath thisGroupPath = parentPath;
+            if (!thisGroup.empty())
+            {
+                GlmMap< GlmString, SdfPath>::iterator foundThisGroupPath = existingPaths.find(thisGroup);
+                if (foundThisGroupPath == existingPaths.end())
+                {
+                    // group does not exist, create it
+                    TfToken thisGroupToken(TfMakeValidIdentifier(thisGroup.c_str()).c_str());
+                    thisGroupPath = parentPath.AppendChild(thisGroupToken);
+                    _primSpecPaths.insert(thisGroupPath);
+                    _primChildNames[parentPath].push_back(thisGroupToken);
+                    existingPaths[thisGroup] = thisGroupPath;
+                }
+                else
+                {
+                    thisGroupPath = foundThisGroupPath.getValue();
+                }
+            }
+            else
+            {
+                thisGroupPath = parentPath;
+            }
+
+            return _CreateHierarchyFor(childrenGroupsHierarchy, thisGroupPath, existingPaths);
+
         }
 
         //-----------------------------------------------------------------------------
