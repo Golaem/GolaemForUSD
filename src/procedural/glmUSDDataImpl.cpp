@@ -1585,7 +1585,6 @@ namespace glm
             TfToken animationsGroupName("Animations");
             GlmString meshVariantEnable("Enable");
             glm::Array<glm::GlmString> entityMeshNames;
-            glm::Array<glm::GlmString> entityMeshAliases;
             SdfPath animationsGroupPath;
             std::vector<TfToken>* animationsChildNames = NULL;
             _cachedSimulationLocks.resize(crowdFieldNames.size());
@@ -1770,7 +1769,6 @@ namespace glm
 
                     uint16_t boneCount = simuData->_boneCount[entityType];
                     volatileData->bonePositionOffset = simuData->_iBoneOffsetPerEntityType[entityType] + simuData->_indexInEntityType[volatileData->inputGeoData._entityIndex] * boneCount;
-                    std::vector<TfToken>& entityChildNames = _primChildNames[entityPath];
                     if (displayMode == GolaemDisplayMode::SKELETON)
                     {
                         if (characterIdx < usdCharacterFilesList.sizeInt())
@@ -1788,7 +1786,7 @@ namespace glm
                         skelEntityData->skeletonPath = SdfPathListOp::CreateExplicit({skeletonPath});
 
                         // compute mesh names
-                        _ComputeEntityMeshNames(entityMeshNames, entityMeshAliases, skelEntityData);
+                        _ComputeEntityMeshNames(entityMeshNames, skelEntityData);
 
                         // fill skel animation data
                         SkelAnimData& animData = _skelAnimDataMap[animationSourcePath];
@@ -1822,10 +1820,10 @@ namespace glm
                     else
                     {
                         glm::crowdio::OutputEntityGeoData outputData; // TODO: see if storage is better
+                        glm::Array<glm::GlmString> entityMeshAliases;
                         _ComputeEntityMeshNames(entityMeshNames, entityMeshAliases, outputData, skinMeshEntityData);
 
-
-                        GlmMap< GlmString, SdfPath> meshTreeSdfPaths;
+                        GlmMap<GlmString, SdfPath> meshTreeSdfPaths;
                         size_t meshCount = entityMeshNames.size();
                         for (size_t iMesh = 0; iMesh < meshCount; ++iMesh)
                         {
@@ -1833,7 +1831,7 @@ namespace glm
                             SdfPath lastMeshTransformPath = entityPath;
                             GlmString meshAlias(entityMeshAliases[iMesh]);
                             GlmString meshName(entityMeshNames[iMesh]);
-                            
+
                             size_t lastPipe = meshAlias.find_last_of('|');
                             if (lastPipe != GlmString::npos && lastPipe != meshAlias.size() - 1)
                             {
@@ -2840,6 +2838,7 @@ namespace glm
         void GolaemUSD_DataImpl::_ComputeEntityMeshNames(glm::Array<glm::GlmString>& meshNames, glm::Array<glm::GlmString>& meshAliases, glm::crowdio::OutputEntityGeoData& outputData, const SkinMeshEntityData* entityData) const
         {
             meshNames.clear();
+            meshAliases.clear();
             GolaemDisplayMode::Value displayMode = (GolaemDisplayMode::Value)_params.glmDisplayMode;
             switch (displayMode)
             {
@@ -2880,11 +2879,12 @@ namespace glm
         }
 
         //-----------------------------------------------------------------------------
-        void GolaemUSD_DataImpl::_ComputeEntityMeshNames(glm::Array<glm::GlmString>& meshNames, glm::Array<glm::GlmString>& meshAliases, const SkelEntityData* entityData) const
+        void GolaemUSD_DataImpl::_ComputeEntityMeshNames(glm::Array<glm::GlmString>& meshNames, const SkelEntityData* entityData) const
         {
             glm::PODArray<int> furAssetIds;
             glm::PODArray<size_t> meshAssetNameIndices;
             glm::PODArray<int> meshAssetMaterialIndices;
+            glm::Array<glm::GlmString> meshAliases;
             glm::crowdio::computeMeshNames(
                 entityData->data.inputGeoData._character,
                 entityData->data.inputGeoData._entityId,
@@ -2897,7 +2897,7 @@ namespace glm
         }
 
         //-----------------------------------------------------------------------------
-        SdfPath GolaemUSD_DataImpl::_CreateHierarchyFor(const glm::GlmString& hierarchy, SdfPath& parentPath, GlmMap< GlmString, SdfPath>& existingPaths)
+        SdfPath GolaemUSD_DataImpl::_CreateHierarchyFor(const glm::GlmString& hierarchy, SdfPath& parentPath, GlmMap<GlmString, SdfPath>& existingPaths)
         {
             if (hierarchy.empty())
                 return parentPath;
@@ -2906,13 +2906,14 @@ namespace glm
             size_t firstSlash = hierarchy.find_first_of('|');
             GlmString thisGroup = hierarchy.substr(0, firstSlash);
             GlmString childrenGroupsHierarchy("");
-            if (firstSlash != GlmString::npos) childrenGroupsHierarchy = hierarchy.substr(firstSlash + 1);
+            if (firstSlash != GlmString::npos)
+                childrenGroupsHierarchy = hierarchy.substr(firstSlash + 1);
 
             // create this group path
             SdfPath thisGroupPath = parentPath;
             if (!thisGroup.empty())
             {
-                GlmMap< GlmString, SdfPath>::iterator foundThisGroupPath = existingPaths.find(thisGroup);
+                GlmMap<GlmString, SdfPath>::iterator foundThisGroupPath = existingPaths.find(thisGroup);
                 if (foundThisGroupPath == existingPaths.end())
                 {
                     // group does not exist, create it
@@ -2933,7 +2934,6 @@ namespace glm
             }
 
             return _CreateHierarchyFor(childrenGroupsHierarchy, thisGroupPath, existingPaths);
-
         }
 
         //-----------------------------------------------------------------------------
