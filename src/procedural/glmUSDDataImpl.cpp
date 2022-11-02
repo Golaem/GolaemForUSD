@@ -1458,7 +1458,7 @@ namespace glm
             // terrain file
             glm::Array<glm::GlmString> crowdFieldNames = glm::stringToStringArray(cfNames.c_str(), ";");
             if (crowdFieldNames.size())
-                srcTerrainFile = cacheDir + "/" + cacheName + "." + crowdFieldNames[0] + ".terrain.gtg";
+                srcTerrainFile = cacheDir + "/" + cacheName + "." + crowdFieldNames[0] + ".gtg";
 
             glm::GlmString materialPath = _params.glmMaterialPath.GetText();
             GolaemMaterialAssignMode::Value materialAssignMode = (GolaemMaterialAssignMode::Value)_params.glmMaterialAssignMode;
