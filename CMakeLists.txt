@@ -177,15 +177,11 @@ else()
                 ${_houdini_hfs_root}/custom/houdini/dsolib/libpxr_work.lib
                 ${PYTHON_LIBRARY}
             )
-            if("${PYTHON_VERSION}" STREQUAL "2")
-                set(_houdini_link_libraries_ 
-                    ${_houdini_link_libraries_} 
-                    ${_houdini_hfs_root}/custom/houdini/dsolib/hboost_python27-mt-x64.lib)
-            else()
-                set(_houdini_link_libraries_ 
-                    ${_houdini_link_libraries_} 
-                    ${_houdini_hfs_root}/custom/houdini/dsolib/hboost_python37-mt-x64.lib)
-            endif()
+
+            set(_houdini_link_libraries_
+                ${_houdini_link_libraries_}
+                ${_houdini_hfs_root}/custom/houdini/dsolib/hboost_python${PYTHON_VERSION}${PYTHON_SUBVERSION}-mt-x64.lib)
+                
             target_link_libraries( ${PROJECT_NAME} ${_houdini_link_libraries_})
         else()
             # Link against Houdini libraries (including USD)
