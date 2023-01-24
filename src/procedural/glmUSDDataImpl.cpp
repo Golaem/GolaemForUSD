@@ -1673,8 +1673,8 @@ namespace glm
                     volatileData->inputGeoData._entityId = entityId;
                     volatileData->inputGeoData._entityIndex = iEntity;
                     volatileData->inputGeoData._simuData = simuData;
-                    volatileData->inputGeoData._indexInFrameData = simuData->_indexInFrameData[iEntity];
-                    GLM_DEBUG_ASSERT(volatileData->inputGeoData._indexInFrameData >= 0);
+                    volatileData->inputGeoData._entityToBakeIndex = simuData->_entityToBakeIndex[iEntity];
+                    GLM_DEBUG_ASSERT(volatileData->inputGeoData._entityToBakeIndex >= 0);
 
                     volatileData->inputGeoData._frames.resize(1);
                     volatileData->inputGeoData._frames[0] = firstFrameInCache;
@@ -3076,7 +3076,7 @@ namespace glm
                 return;
             }
 
-            entityData->enabled = frameData->_entityEnabled[entityData->inputGeoData._indexInFrameData] == 1;
+            entityData->enabled = frameData->_entityEnabled[entityData->inputGeoData._entityToBakeIndex] == 1;
             if (!entityData->enabled)
             {
                 _InvalidateEntity(entityData);
@@ -3126,11 +3126,11 @@ namespace glm
             // update pp attributes
             for (uint8_t iFloatPPAttr = 0; iFloatPPAttr < simuData->_ppFloatAttributeCount; ++iFloatPPAttr)
             {
-                entityData->floatPPAttrValues[iFloatPPAttr] = frameData->_ppFloatAttributeData[iFloatPPAttr][entityData->inputGeoData._indexInFrameData];
+                entityData->floatPPAttrValues[iFloatPPAttr] = frameData->_ppFloatAttributeData[iFloatPPAttr][entityData->inputGeoData._entityToBakeIndex];
             }
             for (uint8_t iVectPPAttr = 0; iVectPPAttr < simuData->_ppVectorAttributeCount; ++iVectPPAttr)
             {
-                entityData->vectorPPAttrValues[iVectPPAttr].Set(frameData->_ppVectorAttributeData[iVectPPAttr][entityData->inputGeoData._indexInFrameData]);
+                entityData->vectorPPAttrValues[iVectPPAttr].Set(frameData->_ppVectorAttributeData[iVectPPAttr][entityData->inputGeoData._entityToBakeIndex]);
             }
 
             // update frame before computing geometry
