@@ -48,7 +48,7 @@ namespace glm
                 bool enabled = true;   // can vary during simulation (kill, emit)
                 uint32_t bonePositionOffset = 0;
                 glm::Mutex* cachedSimulationLock = NULL;
-                glm::Mutex entityComputeLock; // do not allow simultaneous computes of the same entity
+                glm::Mutex* entityComputeLock = NULL; // do not allow simultaneous computes of the same entity
 
                 glm::PODArray<int> intShaderAttrValues;
                 glm::PODArray<float> floatShaderAttrValues;
@@ -59,7 +59,10 @@ namespace glm
                 glm::Array<GfVec3f> vectorPPAttrValues;
 
                 glm::crowdio::InputEntityGeoData inputGeoData;
-                glm::crowdio::CachedSimulation* cachedSimulation;
+                glm::crowdio::CachedSimulation* cachedSimulation = NULL;
+
+                EntityVolatileData();
+                ~EntityVolatileData();
             };
 
             struct SkinMeshData;
@@ -161,7 +164,7 @@ namespace glm
 
             TfHashMap<SdfPath, SkelAnimData, SdfPath::Hash> _skelAnimDataMap;
 
-            mutable glm::Array<glm::Mutex> _cachedSimulationLocks;
+            mutable glm::PODArray<glm::Mutex*> _cachedSimulationLocks;
 
         public:
             GolaemUSD_DataImpl(const GolaemUSD_DataParams& params);
