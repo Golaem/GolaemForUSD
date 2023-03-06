@@ -61,8 +61,8 @@ namespace glm
                 glm::crowdio::InputEntityGeoData inputGeoData;
                 glm::crowdio::CachedSimulation* cachedSimulation = NULL;
 
-                EntityVolatileData();
                 ~EntityVolatileData();
+                void initEntityLock();
             };
 
             struct SkinMeshData;
