@@ -285,6 +285,7 @@ namespace glm
         //-----------------------------------------------------------------------------
         void GolaemUSD_DataImpl::EntityVolatileData::initEntityLock()
         {
+            GLM_DEBUG_ASSERT(entityComputeLock == NULL);
             entityComputeLock = new glm::Mutex();
         }
 
@@ -1682,7 +1683,6 @@ namespace glm
                         skinMeshEntityData->data.inputGeoData._fbxBaker = &getFbxBaker();
                         volatileData->inputGeoData._geometryTag = geoTag;
                     }
-                    GLM_DEBUG_ASSERT(volatileData->entityComputeLock == NULL);
                     volatileData->initEntityLock();
                     volatileData->inputGeoData._dirMapRules = dirmapRules;
                     volatileData->inputGeoData._entityId = entityId;
