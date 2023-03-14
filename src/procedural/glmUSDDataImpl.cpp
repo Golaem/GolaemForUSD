@@ -278,6 +278,19 @@ namespace glm
         }
 
         //-----------------------------------------------------------------------------
+        GolaemUSD_DataImpl::EntityVolatileData::~EntityVolatileData()
+        {
+            delete entityComputeLock;
+        }
+
+        //-----------------------------------------------------------------------------
+        void GolaemUSD_DataImpl::EntityVolatileData::initEntityLock()
+        {
+            GLM_DEBUG_ASSERT(entityComputeLock == NULL);
+            entityComputeLock = new glm::Mutex();
+        }
+
+        //-----------------------------------------------------------------------------
         GolaemUSD_DataImpl::GolaemUSD_DataImpl(const GolaemUSD_DataParams& params)
             : _params(params)
             , _factory(new crowdio::SimulationCacheFactory())
@@ -484,7 +497,7 @@ namespace glm
                         auto _MakeTimeSampleMap = [this, &path]()
                         {
                             SdfTimeSampleMap sampleMap;
-                            for (auto time : _animTimeSampleTimes)
+                            for (auto& time : _animTimeSampleTimes)
                             {
                                 QueryTimeSample(path, time, &sampleMap[time]);
                             }
@@ -759,7 +772,7 @@ namespace glm
             if (_params.glmDisplayMode == GolaemDisplayMode::SKELETON)
             {
                 // Visit the property specs which exist only on entity prims.
-                for (auto it : _skelEntityDataMap)
+                for (auto& it : _skelEntityDataMap)
                 {
                     for (const TfToken& propertyName : _skelEntityPropertyTokens->allTokens)
                     {
@@ -792,7 +805,7 @@ namespace glm
                         }
                     }
                 }
-                for (auto it : _skelAnimDataMap)
+                for (auto& it : _skelAnimDataMap)
                 {
                     for (const TfToken& propertyName : _skelAnimPropertyTokens->allTokens)
                     {
@@ -806,7 +819,7 @@ namespace glm
             else
             {
                 // Visit the property specs which exist only on entity prims.
-                for (auto it : _skinMeshEntityDataMap)
+                for (auto& it : _skinMeshEntityDataMap)
                 {
                     for (const TfToken& propertyName : _skinMeshEntityPropertyTokens->allTokens)
                     {
@@ -833,7 +846,7 @@ namespace glm
                     }
                 }
                 // Visit the property specs which exist only on entity mesh prims.
-                for (auto it : _skinMeshDataMap)
+                for (auto& it : _skinMeshDataMap)
                 {
                     for (const TfToken& propertyName : _skinMeshPropertyTokens->allTokens)
                     {
@@ -1588,7 +1601,7 @@ namespace glm
             glm::Array<glm::GlmString> entityMeshNames;
             SdfPath animationsGroupPath;
             std::vector<TfToken>* animationsChildNames = NULL;
-            _cachedSimulationLocks.resize(crowdFieldNames.size());
+            _cachedSimulationLocks.resize(crowdFieldNames.size(), nullptr);
             for (size_t iCf = 0, cfCount = crowdFieldNames.size(); iCf < cfCount; ++iCf)
             {
                 const glm::GlmString& glmCfName = crowdFieldNames[iCf];
@@ -1632,7 +1645,8 @@ namespace glm
                 const glm::ShaderAssetDataContainer* shaderDataContainer = cachedSimulation.getFinalShaderData(firstFrameInCache, UINT32_MAX, true);
 
                 // create lock for cached simulation
-                glm::Mutex& cachedSimulationLock = _cachedSimulationLocks[iCf];
+                glm::Mutex* cachedSimulationLock = new glm::Mutex();
+                _cachedSimulationLocks[iCf] = cachedSimulationLock;
 
                 size_t maxEntities = (size_t)floorf(simuData->_entityCount * renderPercent);
                 for (uint32_t iEntity = 0; iEntity < simuData->_entityCount; ++iEntity)
@@ -1670,6 +1684,7 @@ namespace glm
                         skinMeshEntityData->data.inputGeoData._fbxBaker = &getFbxBaker();
                         volatileData->inputGeoData._geometryTag = geoTag;
                     }
+                    volatileData->initEntityLock();
                     volatileData->inputGeoData._dirMapRules = dirmapRules;
                     volatileData->inputGeoData._entityId = entityId;
                     volatileData->inputGeoData._entityIndex = iEntity;
@@ -1684,7 +1699,7 @@ namespace glm
 
                     volatileData->computedTimeSample = firstFrameInCache - 1; // ensure there will be a compute in QueryTimeSample
 
-                    volatileData->cachedSimulationLock = &cachedSimulationLock;
+                    volatileData->cachedSimulationLock = cachedSimulationLock;
 
                     volatileData->floatPPAttrValues.resize(simuData->_ppFloatAttributeCount, 0);
                     volatileData->vectorPPAttrValues.resize(simuData->_ppVectorAttributeCount, GfVec3f(0));
@@ -2940,7 +2955,7 @@ namespace glm
         //-----------------------------------------------------------------------------
         void GolaemUSD_DataImpl::_ComputeSkelEntity(const SkelEntityData* entityData, double time) const
         {
-            glm::ScopedLock<glm::Mutex> entityComputeLock(entityData->data.entityComputeLock);
+            glm::ScopedLock<glm::Mutex> entityComputeLock(*entityData->data.entityComputeLock);
             if (entityData->data.computedTimeSample != time)
             {
                 ZoneScopedNC("ComputeSkelEntity", GLM_COLOR_CACHE);
@@ -3145,7 +3160,7 @@ namespace glm
         void GolaemUSD_DataImpl::_ComputeSkinMeshEntity(const SkinMeshEntityData* entityData, double time) const
         {
             // check if computation is needed
-            glm::ScopedLock<glm::Mutex> entityComputeLock(entityData->data.entityComputeLock);
+            glm::ScopedLock<glm::Mutex> entityComputeLock(*entityData->data.entityComputeLock);
             if (entityData->data.computedTimeSample != time)
             {
                 entityData->data.computedTimeSample = time;
