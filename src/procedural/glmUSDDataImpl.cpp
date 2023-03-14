@@ -24,6 +24,7 @@ USD_INCLUDES_END
 #include <glmCrowdFBXCharacter.h>
 #include <glmCrowdGcgCharacter.h>
 #include <glmCrowdIOUtils.h>
+#include <glmTracy.h>
 
 #include <fstream>
 
