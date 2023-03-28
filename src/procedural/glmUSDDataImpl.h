@@ -41,8 +41,6 @@ namespace glm
         class GolaemUSD_DataImpl
         {
         private:
-
-
             // cached data for each entity
             struct EntityData
             {
@@ -73,10 +71,12 @@ namespace glm
                 void initEntityLock();
             };
 
+            struct SkinMeshData;
             struct SkinMeshLodData;
             struct SkinMeshEntityData : public EntityData
             {
-                glm::PODArray<SkinMeshLodData*> meshLodData;
+                glm::PODArray<SkinMeshLodData*> meshLodData; // used when lod is enabled (glmLodMode > 0)
+                glm::PODArray<SkinMeshData*> meshData;       // used when no lod (glmLodMode == 0)
                 GfVec3f pos{0, 0, 0};
 
                 size_t geometryFileIdx = 0; // to check if LOD changed
@@ -98,14 +98,14 @@ namespace glm
             struct SkinMeshTemplateData;
             struct SkinMeshData
             {
-                SkinMeshLodData* lodData = NULL;
+                SkinMeshLodData* lodData = NULL;       // used when lod is enabled (glmLodMode > 0)
+                SkinMeshEntityData* entityData = NULL; // used when no lod (glmLodMode == 0)
 
                 // these parameters are animated
                 VtVec3fArray points;
                 VtVec3fArray normals; // stored by polygon vertex
 
                 const SkinMeshTemplateData* templateData = NULL;
-                SdfPathListOp materialPath;
                 SdfPath meshPath;
             };
 
@@ -117,13 +117,13 @@ namespace glm
                 GlmString meshAlias;
                 int pointsCount;
                 // int normalsCount; // not needed, = faceVertexIndices.size();
-                GlmString materialName;
+                SdfPathListOp materialPath;
             };
 
             struct SkinMeshLodData
             {
                 glm::PODArray<SkinMeshData*> meshData;
-                EntityData* entityData = NULL;
+                SkinMeshEntityData* entityData = NULL;
                 bool enabled = false;
                 SdfPath lodPath;
             };
@@ -153,9 +153,6 @@ namespace glm
                 inline const double& getCurrentFrame() const;
                 void update(const double& currentFrame);
             };
-
-        public:
-            TfToken _formatId;
 
         private:
             // The parameters use to generate specs and time samples, obtained from the
@@ -284,6 +281,13 @@ namespace glm
             void _InvalidateEntity(EntityData* entityData) const;
             void _ComputeBboxData(SkinMeshEntityData* entityData);
             void _ComputeSkinMeshTemplateData(glm::Array<std::map<std::pair<int, int>, SkinMeshTemplateData>>& characterTemplateData, const glm::crowdio::InputEntityGeoData& inputGeoData, const glm::crowdio::OutputEntityGeoData& outputData);
+            void _InitSkinMeshData(const SdfPath& parentPath,
+                                   SkinMeshEntityData* entityData,
+                                   SkinMeshLodData* lodData,
+                                   glm::PODArray<SkinMeshData*>& meshDataArray,
+                                   const std::map<std::pair<int, int>, SkinMeshTemplateData>& templateDataPerMesh,
+                                   const glm::PODArray<int>& gchaMeshIds,
+                                   const glm::PODArray<int>& meshAssetMaterialIndices);
         };
 
         //-----------------------------------------------------------------------------

@@ -650,7 +650,7 @@ namespace glm
                         }
                         if (const SkinMeshLodData* lodData = TfMapLookupPtr(_skinMeshLodDataMap, primPath))
                         {
-                            RETURN_TRUE_WITH_OPTIONAL_VALUE(_params.glmLodMode != 1 || lodData->enabled); // always active when not using static lod
+                            RETURN_TRUE_WITH_OPTIONAL_VALUE(_params.glmLodMode == 2 || lodData->enabled); // always active when not using static lod
                         }
                     }
                 }
@@ -1334,18 +1334,30 @@ namespace glm
                 SkinMeshData* meshData = NULL;
                 if (entityData == NULL)
                 {
-                    meshLodData = TfMapLookupPtr(_skinMeshLodDataMap, primPath);
-                    if (meshLodData != NULL)
+                    if (_params.glmLodMode > 0)
                     {
-                        entityData = static_cast<SkinMeshEntityData*>(meshLodData->entityData);
-                        isMeshLodPath = true;
+                        meshLodData = TfMapLookupPtr(_skinMeshLodDataMap, primPath);
+                        if (meshLodData != NULL)
+                        {
+                            entityData = meshLodData->entityData;
+                            isMeshLodPath = true;
+                        }
+                        else
+                        {
+                            meshData = TfMapLookupPtr(_skinMeshDataMap, primPath);
+                            if (meshData != NULL)
+                            {
+                                entityData = meshData->lodData->entityData;
+                                isMeshPath = true;
+                            }
+                        }
                     }
                     else
                     {
                         meshData = TfMapLookupPtr(_skinMeshDataMap, primPath);
                         if (meshData != NULL)
                         {
-                            entityData = static_cast<SkinMeshEntityData*>(meshData->lodData->entityData);
+                            entityData = meshData->entityData;
                             isMeshPath = true;
                         }
                     }
@@ -1735,6 +1747,7 @@ namespace glm
             }
             else if (displayMode == GolaemDisplayMode::BOUNDING_BOX)
             {
+                _params.glmLodMode = 0; // no lod in bounding box mode
                 _skinMeshTemplateDataPerCharPerLod.resize(1);
                 auto& characterTemplateData = _skinMeshTemplateDataPerCharPerLod[0];
                 characterTemplateData.resize(1);
@@ -2039,8 +2052,8 @@ namespace glm
                     {
                         auto& characterTemplateData = _skinMeshTemplateDataPerCharPerLod[skinMeshEntityData->inputGeoData._characterIdx];
 
-                        glm::PODArray<int> meshAssetMaterialIndices;
                         glm::PODArray<int> gchaMeshIds;
+                        glm::PODArray<int> meshAssetMaterialIndices;
                         {
                             // compute mesh names
                             glm::PODArray<int> furAssetIds;
@@ -2058,59 +2071,40 @@ namespace glm
                                 &gchaMeshIds);
                         }
 
-                        GlmString lodName;
-                        for (size_t iLod = 0, lodCount = characterTemplateData.size(); iLod < lodCount; ++iLod)
+                        if (_params.glmLodMode == 0)
                         {
-                            std::vector<TfToken>& entityChildNames = _primChildNames[entityData->entityPath];
-                            lodName = "lod";
-                            lodName += glm::toString(iLod);
-                            TfToken lodToken(lodName.c_str());
-                            SdfPath lodPath = entityData->entityPath.AppendChild(lodToken);
-                            _primSpecPaths.insert(lodPath);
-                            entityChildNames.push_back(lodToken);
-                            SkinMeshLodData& lodData = _skinMeshLodDataMap[lodPath];
-                            lodData.enabled = _params.glmLodMode == 0; // always enable when no lod
-                            lodData.lodPath = lodPath;
-                            lodData.entityData = entityData;
-                            skinMeshEntityData->meshLodData.push_back(&lodData);
+                            // no lod path
+                            const auto& lodTemplateData = characterTemplateData[0];
 
-                            const auto& lodTemplateData = characterTemplateData[iLod];
-
-                            for (size_t iMesh = 0, meshCount = gchaMeshIds.size(); iMesh < meshCount; ++iMesh)
-                            {
-                                const auto& itMesh = lodTemplateData.find({gchaMeshIds[iMesh], meshAssetMaterialIndices[iMesh]});
-                                if (itMesh == lodTemplateData.end())
-                                {
-                                    continue;
-                                }
-                                const SkinMeshTemplateData& meshTemplateData = itMesh->second;
-
-                                GlmMap<GlmString, SdfPath> meshTreePaths;
-                                SdfPath lastMeshTransformPath = _CreateHierarchyFor(meshTemplateData.meshAlias, lodPath, meshTreePaths);
-
-                                SkinMeshData& meshData = _skinMeshDataMap[lastMeshTransformPath];
-                                meshData.lodData = &lodData;
-                                lodData.meshData.push_back(&meshData);
-                                meshData.meshPath = lastMeshTransformPath;
-                                meshData.templateData = &meshTemplateData;
-                                if (!meshTemplateData.materialName.empty())
-                                {
-                                    meshData.materialPath = SdfPathListOp::CreateExplicit({SdfPath(meshTemplateData.materialName.c_str())});
-                                }
-                                else
-                                {
-                                    meshData.materialPath = (*_skinMeshRelationships)[_skinMeshRelationshipTokens->materialBinding].defaultTargetPath;
-                                }
-                                meshData.points.resize(meshTemplateData.pointsCount);
-                                meshData.normals.resize(meshTemplateData.faceVertexIndices.size());
-                            }
+                            _InitSkinMeshData(entityData->entityPath, skinMeshEntityData, NULL, skinMeshEntityData->meshData, lodTemplateData, gchaMeshIds, meshAssetMaterialIndices);
                         }
-
-                        if (_params.glmLodMode == 1)
+                        else
                         {
-                            // force the first computation in static lod to get accurate lod activation
-                            ++_updateCounter;
-                            _ComputeSkinMeshEntity(skinMeshEntityData, _startFrame);
+                            GlmString lodName;
+                            for (size_t iLod = 0, lodCount = characterTemplateData.size(); iLod < lodCount; ++iLod)
+                            {
+                                lodName = "lod";
+                                lodName += glm::toString(iLod);
+                                TfToken lodToken(lodName.c_str());
+                                SdfPath lodPath = entityData->entityPath.AppendChild(lodToken);
+                                _primSpecPaths.insert(lodPath);
+                                _primChildNames[entityData->entityPath].push_back(lodToken);
+                                SkinMeshLodData& lodData = _skinMeshLodDataMap[lodPath];
+                                lodData.enabled = true;
+                                lodData.lodPath = lodPath;
+                                lodData.entityData = skinMeshEntityData;
+                                skinMeshEntityData->meshLodData.push_back(&lodData);
+
+                                const auto& lodTemplateData = characterTemplateData[iLod];
+                                _InitSkinMeshData(lodPath, NULL, &lodData, lodData.meshData, lodTemplateData, gchaMeshIds, meshAssetMaterialIndices);
+                            }
+
+                            if (_params.glmLodMode == 1)
+                            {
+                                // force the first computation in static lod to get accurate lod activation
+                                ++_updateCounter;
+                                _ComputeSkinMeshEntity(skinMeshEntityData, _startFrame);
+                            }
                         }
                     }
                 }
@@ -2125,6 +2119,38 @@ namespace glm
             }
         }
 
+        //-----------------------------------------------------------------------------
+        void GolaemUSD_DataImpl::_InitSkinMeshData(
+            const SdfPath& parentPath,
+            SkinMeshEntityData* entityData,
+            SkinMeshLodData* lodData,
+            glm::PODArray<SkinMeshData*>& meshDataArray,
+            const std::map<std::pair<int, int>, SkinMeshTemplateData>& templateDataPerMesh,
+            const glm::PODArray<int>& gchaMeshIds,
+            const glm::PODArray<int>& meshAssetMaterialIndices)
+        {
+            for (size_t iMesh = 0, meshCount = gchaMeshIds.size(); iMesh < meshCount; ++iMesh)
+            {
+                const auto& itMesh = templateDataPerMesh.find({gchaMeshIds[iMesh], meshAssetMaterialIndices[iMesh]});
+                if (itMesh == templateDataPerMesh.end())
+                {
+                    continue;
+                }
+                const SkinMeshTemplateData& meshTemplateData = itMesh->second;
+
+                GlmMap<GlmString, SdfPath> meshTreePaths;
+                SdfPath lastMeshTransformPath = _CreateHierarchyFor(meshTemplateData.meshAlias, parentPath, meshTreePaths);
+
+                SkinMeshData& meshData = _skinMeshDataMap[lastMeshTransformPath];
+                meshData.lodData = lodData;
+                meshData.entityData = entityData;
+                meshDataArray.push_back(&meshData);
+                meshData.meshPath = lastMeshTransformPath;
+                meshData.templateData = &meshTemplateData;
+                meshData.points.resize(meshTemplateData.pointsCount);
+                meshData.normals.resize(meshTemplateData.faceVertexIndices.size());
+            }
+        }
 
         //-----------------------------------------------------------------------------
         bool GolaemUSD_DataImpl::_IsAnimatedProperty(const SdfPath& path) const
@@ -2497,7 +2523,7 @@ namespace glm
                         {
                             if (nameToken == _skinMeshRelationshipTokens->materialBinding)
                             {
-                                *value = VtValue(meshData->materialPath);
+                                *value = VtValue(meshData->templateData->materialPath);
                             }
                             else
                             {
@@ -2744,7 +2770,7 @@ namespace glm
                 ZoneScopedNC("ComputeSkelEntity", GLM_COLOR_CACHE);
                 entityData->computedTimeSample = time;
 
-                _ComputeEntity(&entityData, time);
+                _ComputeEntity(entityData, time);
                 if (!entityData->enabled)
                 {
                     return;
@@ -2958,7 +2984,7 @@ namespace glm
 
                 entityData->computedTimeSample = time;
 
-                _ComputeEntity(&entityData, time);
+                _ComputeEntity(entityData, time);
                 if (!entityData->enabled)
                 {
                     return;
@@ -2978,16 +3004,16 @@ namespace glm
                     float entityPos[3] = {0, 0, 0};
                     float cameraPos[3] = {0, 0, 0};
 
-                    if (_params.glmLodMode != 0)
+                    if (_params.glmLodMode > 0)
                     {
                         // update LOD data
                         memcpy(entityPos, rootPos, sizeof(float[3]));
-                        if(_params.glmLodMode == 1)
+                        if (_params.glmLodMode == 1)
                         {
                             // in static lod mode get the camera pos directly from the params
                             memcpy(cameraPos, _params.glmCameraPos.data(), sizeof(float[3]));
                         }
-                        else if(_params.glmLodMode == 2)
+                        else if (_params.glmLodMode == 2)
                         {
                             // in dynamic lod mode get the camera pos from the node attributes (it may be connected to another attribute - usdWrapper will do the update)
                             glm::ScopedLock<glm::Mutex> updateLock(_updateLock); // avoid retrieving a value during usdWrapper update
@@ -3013,16 +3039,22 @@ namespace glm
                         entityData->geometryFileIdx = outputData._geometryFileIndexes[0];
                         size_t meshCount = outputData._meshAssetNameIndices.size();
 
-                        SkinMeshLodData* lodData = entityData->meshLodData[entityData->geometryFileIdx];
+                        glm::PODArray<SkinMeshData*>* meshDataArray = NULL;
 
-                        if (_params.glmLodMode != 0)
+                        if (_params.glmLodMode == 0)
                         {
+                            meshDataArray = &entityData->meshData;
+                        }
+                        else
+                        {
+                            SkinMeshLodData* lodData = entityData->meshLodData[entityData->geometryFileIdx];
                             // update lod visibility
                             for (SkinMeshLodData* currentLodData : entityData->meshLodData)
                             {
                                 currentLodData->enabled = false;
                             }
                             lodData->enabled = true;
+                            meshDataArray = &lodData->meshData;
                         }
 
                         glm::Array<glm::Array<glm::Vector3>>& frameDeformedVertices = outputData._deformedVertices[0];
@@ -3065,7 +3097,7 @@ namespace glm
                                     continue;
                                 }
 
-                                SkinMeshData* meshData = lodData->meshData[iRenderMesh];
+                                SkinMeshData* meshData = meshDataArray->at(iRenderMesh);
 
                                 // when fbxMesh == NULL, vertexCount == 0, so no need to check fbxMesh != NULL
                                 FbxNode* fbxNode = fbxCharacter->getCharacterFBXMeshes()[iGeoFileMesh];
@@ -3217,7 +3249,7 @@ namespace glm
                                     continue;
                                 }
 
-                                SkinMeshData* meshData = lodData->meshData[iRenderMesh];
+                                SkinMeshData* meshData = meshDataArray->at(iRenderMesh);
 
                                 for (size_t iVertex = 0; iVertex < vertexCount; ++iVertex)
                                 {
@@ -3285,22 +3317,12 @@ namespace glm
         {
             glm::GlmString meshName = "BBOX";
 
-            std::vector<TfToken>& entityChildNames = _primChildNames[entityData->entityPath];
-            TfToken lodToken("lod0");
-            SdfPath lodPath = entityData->entityPath.AppendChild(lodToken);
-            _primSpecPaths.insert(lodPath);
-            entityChildNames.push_back(lodToken);
-            SkinMeshLodData& lodData = _skinMeshLodDataMap[lodPath];
-            lodData.enabled = true;
-            lodData.lodPath = lodPath;
-            lodData.entityData = entityData;
-
             GlmMap<GlmString, SdfPath> meshTreePaths;
-            SdfPath lastMeshTransformPath = _CreateHierarchyFor(meshName, lodPath, meshTreePaths);
+            SdfPath lastMeshTransformPath = _CreateHierarchyFor(meshName, entityData->entityPath, meshTreePaths);
 
             SkinMeshData& meshData = _skinMeshDataMap[lastMeshTransformPath];
-            meshData.lodData = &lodData;
-            lodData.meshData.push_back(&meshData);
+            meshData.entityData = entityData;
+            entityData->meshData.push_back(&meshData);
             meshData.meshPath = lastMeshTransformPath;
             meshData.templateData = &_skinMeshTemplateDataPerCharPerLod[0][0][{0, 0}];
 
@@ -3680,7 +3702,14 @@ namespace glm
                             break;
                         }
                     }
-                    meshTemplateData.materialName = materialName;
+                    if (!materialName.empty())
+                    {
+                        meshTemplateData.materialPath = SdfPathListOp::CreateExplicit({SdfPath(materialName.c_str())});
+                    }
+                    else
+                    {
+                        meshTemplateData.materialPath = (*_skinMeshRelationships)[_skinMeshRelationshipTokens->materialBinding].defaultTargetPath;
+                    }
                 }
             }
         }
@@ -3737,7 +3766,7 @@ namespace glm
             {
                 bool updatePrimPath = _usdWrapper._usdStage == NULL;
                 _usdWrapper._usdStage = usdStage;
-            
+
                 if (updatePrimPath)
                 {
                     // find the path to in the final stage
