@@ -673,7 +673,7 @@ namespace glm
                     {
 #if PXR_VERSION >= 2102 // there is a bug with instances in lower versions: https://github.com/PixarAnimationStudios/USD/issues/1347
                         SdfPath primPath = path.GetAbsoluteRootOrPrimPath();
-                        if (const SkelEntityData* entityData = TfMapLookupPtr(_skelEntityDataMap, primPath))
+                        if (TfMapLookupPtr(_skelEntityDataMap, primPath))
                         {
                             RETURN_TRUE_WITH_OPTIONAL_VALUE(true);
                         }
@@ -704,8 +704,7 @@ namespace glm
                     {
                         if (TfMapLookupPtr(_skelEntityDataMap, path) == NULL && TfMapLookupPtr(_skelAnimDataMap, path) == NULL)
                         {
-                            const std::vector<TfToken>* childNames = TfMapLookupPtr(_primChildNames, path);
-                            if (childNames != NULL)
+                            if (const std::vector<TfToken>* childNames = TfMapLookupPtr(_primChildNames, path))
                             {
                                 RETURN_TRUE_WITH_OPTIONAL_VALUE(*childNames);
                             }
@@ -715,8 +714,7 @@ namespace glm
                     {
                         if (TfMapLookupPtr(_skinMeshDataMap, path) == NULL)
                         {
-                            const std::vector<TfToken>* childNames = TfMapLookupPtr(_primChildNames, path);
-                            if (childNames != NULL)
+                            if (const std::vector<TfToken>* childNames = TfMapLookupPtr(_primChildNames, path))
                             {
                                 RETURN_TRUE_WITH_OPTIONAL_VALUE(*childNames);
                             }
@@ -754,7 +752,7 @@ namespace glm
                             }
                             RETURN_TRUE_WITH_OPTIONAL_VALUE(entityTokens);
                         }
-                        if (const SkelAnimData* animData = TfMapLookupPtr(_skelAnimDataMap, path))
+                        if (TfMapLookupPtr(_skelAnimDataMap, path))
                         {
                             RETURN_TRUE_WITH_OPTIONAL_VALUE(_skelAnimPropertyTokens->allTokens);
                         }
@@ -776,11 +774,11 @@ namespace glm
                             }
                             RETURN_TRUE_WITH_OPTIONAL_VALUE(entityTokens);
                         }
-                        if (const SkinMeshLodData* lodData = TfMapLookupPtr(_skinMeshLodDataMap, path))
+                        if (TfMapLookupPtr(_skinMeshLodDataMap, path))
                         {
                             RETURN_TRUE_WITH_OPTIONAL_VALUE(_skinMeshLodPropertyTokens->allTokens);
                         }
-                        if (const SkinMeshData* meshData = TfMapLookupPtr(_skinMeshDataMap, path))
+                        if (TfMapLookupPtr(_skinMeshDataMap, path))
                         {
                             std::vector<TfToken> meshTokens = _skinMeshPropertyTokens->allTokens;
                             meshTokens.insert(meshTokens.end(), _skinMeshRelationshipTokens->allTokens.begin(), _skinMeshRelationshipTokens->allTokens.end());
@@ -960,7 +958,7 @@ namespace glm
                     {
                         if (const _PrimPropertyInfo* propInfo = TfMapLookupPtr(*_skelEntityProperties, nameToken))
                         {
-                            if (const SkelEntityData* entityData = TfMapLookupPtr(_skelEntityDataMap, primPath))
+                            if (TfMapLookupPtr(_skelEntityDataMap, primPath))
                             {
                                 // Include time sample field in the property is animated.
                                 if (propInfo->isAnimated)
@@ -993,9 +991,9 @@ namespace glm
                                 }
                             }
                         }
-                        if (const _PrimRelationshipInfo* relInfo = TfMapLookupPtr(*_skelEntityRelationships, nameToken))
+                        if (TfMapLookupPtr(*_skelEntityRelationships, nameToken))
                         {
-                            if (const SkelEntityData* entityData = TfMapLookupPtr(_skelEntityDataMap, primPath))
+                            if (TfMapLookupPtr(_skelEntityDataMap, primPath))
                             {
                                 return relationshipFields;
                             }
@@ -1014,7 +1012,7 @@ namespace glm
                     {
                         if (const _PrimPropertyInfo* propInfo = TfMapLookupPtr(*_skinMeshEntityProperties, nameToken))
                         {
-                            if (const SkinMeshEntityData* entityData = TfMapLookupPtr(_skinMeshEntityDataMap, primPath))
+                            if (TfMapLookupPtr(_skinMeshEntityDataMap, primPath))
                             {
                                 // Include time sample field in the property is animated.
                                 if (propInfo->isAnimated)
@@ -1029,7 +1027,7 @@ namespace glm
                         }
                         if (const _PrimPropertyInfo* propInfo = TfMapLookupPtr(*_skinMeshLodProperties, nameToken))
                         {
-                            if (const SkinMeshLodData* lodData = TfMapLookupPtr(_skinMeshLodDataMap, primPath))
+                            if (TfMapLookupPtr(_skinMeshLodDataMap, primPath))
                             {
                                 // Include time sample field in the property is animated.
                                 if (propInfo->isAnimated)
@@ -1044,7 +1042,7 @@ namespace glm
                         }
                         if (const _PrimPropertyInfo* propInfo = TfMapLookupPtr(*_skinMeshProperties, nameToken))
                         {
-                            if (const SkinMeshData* meshData = TfMapLookupPtr(_skinMeshDataMap, primPath))
+                            if (TfMapLookupPtr(_skinMeshDataMap, primPath))
                             {
                                 // Include time sample field in the property is animated.
                                 if (propInfo->isAnimated)
@@ -1065,9 +1063,9 @@ namespace glm
                                 }
                             }
                         }
-                        if (const _PrimRelationshipInfo* relInfo = TfMapLookupPtr(*_skinMeshRelationships, nameToken))
+                        if (TfMapLookupPtr(*_skinMeshRelationships, nameToken))
                         {
-                            if (const SkinMeshData* meshData = TfMapLookupPtr(_skinMeshDataMap, primPath))
+                            if (TfMapLookupPtr(_skinMeshDataMap, primPath))
                             {
                                 return relationshipFields;
                             }
@@ -2172,7 +2170,7 @@ namespace glm
                 // Check that it's one of our animated property names.
                 if (const _PrimPropertyInfo* propInfo = TfMapLookupPtr(*_skelEntityProperties, nameToken))
                 {
-                    if (const SkelEntityData* entityData = TfMapLookupPtr(_skelEntityDataMap, primPath))
+                    if (TfMapLookupPtr(_skelEntityDataMap, primPath))
                     {
                         return propInfo->isAnimated;
                     }
@@ -2206,21 +2204,21 @@ namespace glm
                 // Check that it's one of our animated property names.
                 if (const _PrimPropertyInfo* propInfo = TfMapLookupPtr(*_skinMeshEntityProperties, nameToken))
                 {
-                    if (const SkinMeshEntityData* entityData = TfMapLookupPtr(_skinMeshEntityDataMap, primPath))
+                    if (TfMapLookupPtr(_skinMeshEntityDataMap, primPath))
                     {
                         return propInfo->isAnimated;
                     }
                 }
                 if (const _PrimPropertyInfo* propInfo = TfMapLookupPtr(*_skinMeshLodProperties, nameToken))
                 {
-                    if (const SkinMeshLodData* lodData = TfMapLookupPtr(_skinMeshLodDataMap, primPath))
+                    if (TfMapLookupPtr(_skinMeshLodDataMap, primPath))
                     {
                         return propInfo->isAnimated;
                     }
                 }
                 if (const _PrimPropertyInfo* propInfo = TfMapLookupPtr(*_skinMeshProperties, nameToken))
                 {
-                    if (const SkinMeshData* meshData = TfMapLookupPtr(_skinMeshDataMap, primPath))
+                    if (TfMapLookupPtr(_skinMeshDataMap, primPath))
                     {
                         return propInfo->isAnimated;
                     }
@@ -2560,7 +2558,7 @@ namespace glm
                 if (const _PrimPropertyInfo* propInfo = TfMapLookupPtr(*_skinMeshProperties, nameToken))
                 {
                     // Check that it belongs to a leaf prim before getting the interpolation value
-                    if (const SkinMeshData* meshData = TfMapLookupPtr(_skinMeshDataMap, primPath))
+                    if (TfMapLookupPtr(_skinMeshDataMap, primPath))
                     {
                         if (value)
                         {
@@ -2604,7 +2602,7 @@ namespace glm
                 if (const _PrimPropertyInfo* propInfo = TfMapLookupPtr(*_skelEntityProperties, nameToken))
                 {
                     // Check that it belongs to a leaf prim before getting the type name value
-                    if (const SkelEntityData* entityData = TfMapLookupPtr(_skelEntityDataMap, primPath))
+                    if (TfMapLookupPtr(_skelEntityDataMap, primPath))
                     {
                         RETURN_TRUE_WITH_OPTIONAL_VALUE(propInfo->typeName);
                     }
@@ -2614,7 +2612,7 @@ namespace glm
                 if (const _PrimPropertyInfo* propInfo = TfMapLookupPtr(*_skelAnimProperties, nameToken))
                 {
                     // Check that it belongs to a leaf prim before getting the type name value
-                    if (const SkelAnimData* animData = TfMapLookupPtr(_skelAnimDataMap, primPath))
+                    if (TfMapLookupPtr(_skelAnimDataMap, primPath))
                     {
                         RETURN_TRUE_WITH_OPTIONAL_VALUE(propInfo->typeName);
                     }
@@ -2654,7 +2652,7 @@ namespace glm
                 if (const _PrimPropertyInfo* propInfo = TfMapLookupPtr(*_skinMeshEntityProperties, nameToken))
                 {
                     // Check that it belongs to a leaf prim before getting the type name value
-                    if (const SkinMeshEntityData* entityData = TfMapLookupPtr(_skinMeshEntityDataMap, primPath))
+                    if (TfMapLookupPtr(_skinMeshEntityDataMap, primPath))
                     {
                         RETURN_TRUE_WITH_OPTIONAL_VALUE(propInfo->typeName);
                     }
@@ -2664,7 +2662,7 @@ namespace glm
                 if (const _PrimPropertyInfo* propInfo = TfMapLookupPtr(*_skinMeshLodProperties, nameToken))
                 {
                     // Check that it belongs to a leaf prim before getting the type name value
-                    if (const SkinMeshLodData* lodData = TfMapLookupPtr(_skinMeshLodDataMap, primPath))
+                    if (TfMapLookupPtr(_skinMeshLodDataMap, primPath))
                     {
                         RETURN_TRUE_WITH_OPTIONAL_VALUE(propInfo->typeName);
                     }
@@ -2674,7 +2672,7 @@ namespace glm
                 if (const _PrimPropertyInfo* propInfo = TfMapLookupPtr(*_skinMeshProperties, nameToken))
                 {
                     // Check that it belongs to a leaf prim before getting the type name value
-                    if (const SkinMeshData* meshData = TfMapLookupPtr(_skinMeshDataMap, primPath))
+                    if (TfMapLookupPtr(_skinMeshDataMap, primPath))
                     {
                         RETURN_TRUE_WITH_OPTIONAL_VALUE(propInfo->typeName);
                     }
