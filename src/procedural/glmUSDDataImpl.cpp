@@ -2433,7 +2433,7 @@ namespace glm
 
                     return false;
                 }
-                if (const _PrimPropertyInfo* propInfo = TfMapLookupPtr(*_skinMeshLodProperties, nameToken))
+                if (TfMapLookupPtr(*_skinMeshLodProperties, nameToken))
                 {
                     if (const SkinMeshLodData* lodData = TfMapLookupPtr(_skinMeshLodDataMap, primPath))
                     {
