@@ -67,6 +67,8 @@ namespace glm
                 glm::crowdio::InputEntityGeoData inputGeoData;
                 glm::crowdio::CachedSimulation* cachedSimulation = NULL;
 
+                GfVec3f pos{0, 0, 0};
+
                 ~EntityData();
                 void initEntityLock();
             };
@@ -77,18 +79,16 @@ namespace glm
             {
                 glm::PODArray<SkinMeshLodData*> meshLodData; // used when lod is enabled (glmLodMode > 0)
                 glm::PODArray<SkinMeshData*> meshData;       // used when no lod (glmLodMode == 0)
-                GfVec3f pos{0, 0, 0};
 
                 size_t geometryFileIdx = 0; // to check if LOD changed
             };
 
             struct SkelAnimData;
-
             struct SkelEntityData : public EntityData
             {
                 SkelAnimData* animData = NULL;
                 SdfReferenceListOp referencedUsdCharacter;
-                SdfVariantSelectionMap meshVariants;
+                SdfVariantSelectionMap geoVariants;
 
                 SdfPathListOp animationSourcePath;
                 SdfPathListOp skeletonPath;
@@ -170,12 +170,6 @@ namespace glm
             glm::Array<GlmString> _ppAttrTypes;
             glm::Array<VtValue> _ppAttrDefaultValues;
 
-            UsdWrapper _usdWrapper;
-            glm::Mutex _updateLock;
-
-            size_t _entityCount = 0;
-            size_t _updateCounter = 0;
-
             int _startFrame;
             int _endFrame;
 
@@ -202,6 +196,12 @@ namespace glm
             TfHashMap<SdfPath, SkelAnimData, SdfPath::Hash> _skelAnimDataMap;
 
             glm::PODArray<glm::Mutex*> _cachedSimulationLocks;
+
+            UsdWrapper _usdWrapper;
+            glm::Mutex _updateLock;
+
+            size_t _entityCount = 0;
+            size_t _updateCounter = 0;
 
             std::map<TfToken, VtValue, TfTokenFastArbitraryLessThan> _usdParams; // additional usd params and their value
 
@@ -253,7 +253,7 @@ namespace glm
 
             /// Computes the value for the time sample if the spec path is one of the
             /// animated properties.
-            bool QueryTimeSample(const SdfPath& path, double time, VtValue* value);
+            bool QueryTimeSample(const SdfPath& path, double frame, VtValue* value);
 
             /// <summary>
             /// Notice received when an object changes in the stage
@@ -275,19 +275,24 @@ namespace glm
             bool _HasPropertyInterpolation(const SdfPath& path, VtValue* value) const;
 
             SdfPath _CreateHierarchyFor(const glm::GlmString& hierarchy, const SdfPath& parentPath, GlmMap<GlmString, SdfPath>& existingPaths);
-            void _ComputeSkelEntity(SkelEntityData* entityData, double time);
-            void _ComputeSkinMeshEntity(SkinMeshEntityData* entityData, double time);
-            void _ComputeEntity(EntityData* entityData, double time) const;
-            void _InvalidateEntity(EntityData* entityData) const;
+            void _ComputeSkelEntity(SkelEntityData* entityData, double frame);
+            void _ComputeSkinMeshEntity(SkinMeshEntityData* entityData, double frame);
+            void _DoComputeSkinMeshEntity(SkinMeshEntityData* entityData);
+            void _ComputeEntity(EntityData* entityData);
+            void _InvalidateEntity(EntityData* entityData);
             void _ComputeBboxData(SkinMeshEntityData* entityData);
-            void _ComputeSkinMeshTemplateData(glm::Array<std::map<std::pair<int, int>, SkinMeshTemplateData>>& characterTemplateData, const glm::crowdio::InputEntityGeoData& inputGeoData, const glm::crowdio::OutputEntityGeoData& outputData);
-            void _InitSkinMeshData(const SdfPath& parentPath,
-                                   SkinMeshEntityData* entityData,
-                                   SkinMeshLodData* lodData,
-                                   glm::PODArray<SkinMeshData*>& meshDataArray,
-                                   const std::map<std::pair<int, int>, SkinMeshTemplateData>& templateDataPerMesh,
-                                   const glm::PODArray<int>& gchaMeshIds,
-                                   const glm::PODArray<int>& meshAssetMaterialIndices);
+            void _ComputeSkinMeshTemplateData(
+                glm::Array<std::map<std::pair<int, int>, SkinMeshTemplateData>>& characterTemplateData,
+                const glm::crowdio::InputEntityGeoData& inputGeoData,
+                const glm::crowdio::OutputEntityGeoData& outputData);
+            void _InitSkinMeshData(
+                const SdfPath& parentPath,
+                SkinMeshEntityData* entityData,
+                SkinMeshLodData* lodData,
+                glm::PODArray<SkinMeshData*>& meshDataArray,
+                const std::map<std::pair<int, int>, SkinMeshTemplateData>& templateDataPerMesh,
+                const glm::PODArray<int>& gchaMeshIds,
+                const glm::PODArray<int>& meshAssetMaterialIndices);
         };
 
         //-----------------------------------------------------------------------------
