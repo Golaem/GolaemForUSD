@@ -31,7 +31,7 @@ namespace glm
         static int s_initCount = 0;
 
         //-----------------------------------------------------------------------------
-        void init()
+        int init()
         {
             glm::ScopedLock<glm::Mutex> lock(s_initLock);
             if (s_initCount == 0)
@@ -58,6 +58,7 @@ namespace glm
                 glm::crowdio::init();
             }
             ++s_initCount;
+            return s_initCount;
         }
 
         //-------------------------------------------------------------------------

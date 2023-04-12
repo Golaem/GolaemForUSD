@@ -113,7 +113,6 @@ namespace glm
             FileFormatArguments* args,
             VtValue* contextDependencyData) const
         {
-            GLM_UNREFERENCED(assetPath);
             GLM_UNREFERENCED(contextDependencyData);
             GolaemUSD_DataParams params;
 
@@ -125,6 +124,7 @@ namespace glm
             {
                 params = GolaemUSD_DataParams::FromDict(val.UncheckedGet<VtDictionary>());
             }
+            params.glmProceduralFile = TfToken(assetPath); // use this file for relative paths
 
             // Convert the entire params object to file format arguments. We always
             // convert all parameters even if they're default as the args are part of

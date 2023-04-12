@@ -41,14 +41,20 @@ namespace glm
         class GolaemUSD_DataImpl
         {
         private:
-            struct EntityVolatileData
+            // cached data for each entity
+            struct EntityData
             {
+                std::map<TfToken, size_t, TfTokenFastArbitraryLessThan> ppAttrIndexes;
+                std::map<TfToken, size_t, TfTokenFastArbitraryLessThan> shaderAttrIndexes;
+
+                SdfPath entityPath;
+
                 double computedTimeSample = 0;
                 bool excluded = false; // excluded by layout - the entity will always be empty
                 bool enabled = true;   // can vary during simulation (kill, emit)
                 uint32_t bonePositionOffset = 0;
                 glm::Mutex* cachedSimulationLock = NULL;
-                glm::Mutex entityComputeLock; // do not allow simultaneous computes of the same entity
+                glm::Mutex* entityComputeLock = NULL; // do not allow simultaneous computes of the same entity
 
                 glm::PODArray<int> intShaderAttrValues;
                 glm::PODArray<float> floatShaderAttrValues;
@@ -59,57 +65,67 @@ namespace glm
                 glm::Array<GfVec3f> vectorPPAttrValues;
 
                 glm::crowdio::InputEntityGeoData inputGeoData;
-                glm::crowdio::CachedSimulation* cachedSimulation;
+                glm::crowdio::CachedSimulation* cachedSimulation = NULL;
+
+                GfVec3f pos{0, 0, 0};
+
+                ~EntityData();
+                void initEntityLock();
             };
 
             struct SkinMeshData;
-            struct SkinMeshEntityVolatileData : public EntityVolatileData
-            {
-                glm::PODArray<SkinMeshData*> meshData;
-                GfVec3f pos{0, 0, 0};
-            };
-
-            // cached data for each entity
-            struct EntityData
-            {
-                std::map<TfToken, size_t, TfTokenFastArbitraryLessThan> ppAttrIndexes;
-                std::map<TfToken, size_t, TfTokenFastArbitraryLessThan> shaderAttrIndexes;
-            };
-
+            struct SkinMeshLodData;
             struct SkinMeshEntityData : public EntityData
             {
-                mutable SkinMeshEntityVolatileData data;
+                glm::PODArray<SkinMeshLodData*> meshLodData; // used when lod is enabled (glmLodMode > 0)
+                glm::PODArray<SkinMeshData*> meshData;       // used when no lod (glmLodMode == 0)
+
+                size_t geometryFileIdx = 0; // to check if LOD changed
             };
 
             struct SkelAnimData;
-            struct SkelEntityVolatileData : public EntityVolatileData
+            struct SkelEntityData : public EntityData
             {
                 SkelAnimData* animData = NULL;
                 SdfReferenceListOp referencedUsdCharacter;
-                SdfVariantSelectionMap meshVariants;
-            };
-            struct SkelEntityData : public EntityData
-            {
-                mutable SkelEntityVolatileData data;
+                SdfVariantSelectionMap geoVariants;
+
                 SdfPathListOp animationSourcePath;
                 SdfPathListOp skeletonPath;
             };
 
-            struct SkinMeshVolatileData
-            {
-                // these parameters are animated
-                bool active = true;
-                VtVec3fArray points;
-                VtVec3fArray normals; // stored by polygon vertex
-            };
+            struct SkinMeshLodData;
+            struct SkinMeshTemplateData;
             struct SkinMeshData
             {
-                const EntityData* entityData = NULL;
-                mutable SkinMeshVolatileData data;
+                SkinMeshLodData* lodData = NULL;       // used when lod is enabled (glmLodMode > 0)
+                SkinMeshEntityData* entityData = NULL; // used when no lod (glmLodMode == 0)
+
+                // these parameters are animated
+                VtVec3fArray points;
+                VtVec3fArray normals; // stored by polygon vertex
+
+                const SkinMeshTemplateData* templateData = NULL;
+                SdfPath meshPath;
+            };
+
+            struct SkinMeshTemplateData
+            {
                 VtIntArray faceVertexCounts;
                 VtIntArray faceVertexIndices;
                 glm::Array<VtVec2fArray> uvSets; // stored by polygon vertex
+                GlmString meshAlias;
+                int pointsCount;
+                // int normalsCount; // not needed, = faceVertexIndices.size();
                 SdfPathListOp materialPath;
+            };
+
+            struct SkinMeshLodData
+            {
+                glm::PODArray<SkinMeshData*> meshData;
+                SkinMeshEntityData* entityData = NULL;
+                bool enabled = false;
+                SdfPath lodPath;
             };
 
             struct SkelAnimData
@@ -121,9 +137,24 @@ namespace glm
                 uint32_t boneSnsOffset = 0;
 
                 VtVec3fArray translations;
-                const SkelEntityData* entityData = NULL;
+                SkelEntityData* entityData = NULL;
             };
 
+            struct UsdWrapper
+            {
+            public:
+                glm::Array<std::pair<VtValue*, SdfPath>> _connectedUsdParams;
+                UsdStagePtr _usdStage = NULL; // from GolaemUSD_DataImpl
+
+            protected:
+                double _currentFrame = -FLT_MAX;
+
+            public:
+                inline const double& getCurrentFrame() const;
+                void update(const double& currentFrame);
+            };
+
+        private:
             // The parameters use to generate specs and time samples, obtained from the
             // layer's file format arguments.
             GolaemUSD_DataParams _params;
@@ -131,6 +162,7 @@ namespace glm
             crowdio::SimulationCacheFactory* _factory;
             glm::Array<glm::PODArray<int>> _sgToSsPerChar;
             glm::Array<PODArray<int>> _snsIndicesPerChar;
+            glm::Array<glm::Array<std::map<std::pair<int, int>, SkinMeshTemplateData>>> _skinMeshTemplateDataPerCharPerLod;
 
             glm::Array<GlmString> _shaderAttrTypes;
             glm::Array<VtValue> _shaderAttrDefaultValues;
@@ -159,9 +191,22 @@ namespace glm
 
             TfHashMap<SdfPath, SkinMeshData, SdfPath::Hash> _skinMeshDataMap;
 
+            TfHashMap<SdfPath, SkinMeshLodData, SdfPath::Hash> _skinMeshLodDataMap;
+
             TfHashMap<SdfPath, SkelAnimData, SdfPath::Hash> _skelAnimDataMap;
 
-            mutable glm::Array<glm::Mutex> _cachedSimulationLocks;
+            glm::PODArray<glm::Mutex*> _cachedSimulationLocks;
+
+            UsdWrapper _usdWrapper;
+            glm::Mutex _updateLock;
+
+            size_t _entityCount = 0;
+            size_t _updateCounter = 0;
+
+            std::map<TfToken, VtValue, TfTokenFastArbitraryLessThan> _usdParams; // additional usd params and their value
+
+            SdfPath _rootPathInFinalStage;
+            int _rootNodeIdInFinalStage = -1;
 
         public:
             GolaemUSD_DataImpl(const GolaemUSD_DataParams& params);
@@ -175,7 +220,7 @@ namespace glm
 
             /// Returns whether a value should exist for the given \a path and
             /// \a fieldName. Optionally returns the value if it exists.
-            bool Has(const SdfPath& path, const TfToken& field, VtValue* value = NULL) const;
+            bool Has(const SdfPath& path, const TfToken& field, VtValue* value = NULL);
 
             /// Visits every spec generated from our params with the given
             /// \p visitor.
@@ -208,7 +253,15 @@ namespace glm
 
             /// Computes the value for the time sample if the spec path is one of the
             /// animated properties.
-            bool QueryTimeSample(const SdfPath& path, double time, VtValue* value) const;
+            bool QueryTimeSample(const SdfPath& path, double frame, VtValue* value);
+
+            /// <summary>
+            /// Notice received when an object changes in the stage
+            /// </summary>
+            /// <param name="notice"></param>
+            void HandleNotice(const UsdNotice::ObjectsChanged& notice);
+
+            void RefreshUsdStage(UsdStagePtr usdStage);
 
         private:
             // Initializes the cached data from the params object.
@@ -221,13 +274,31 @@ namespace glm
             bool _HasPropertyTypeNameValue(const SdfPath& path, VtValue* value) const;
             bool _HasPropertyInterpolation(const SdfPath& path, VtValue* value) const;
 
-            void _ComputeEntityMeshNames(glm::Array<glm::GlmString>& meshNames, glm::Array<glm::GlmString>& meshAliases, glm::crowdio::OutputEntityGeoData& outputData, const SkinMeshEntityData* entityData) const;
-            void _ComputeEntityMeshNames(glm::Array<glm::GlmString>& meshNames, const SkelEntityData* entityData) const;
-            SdfPath _CreateHierarchyFor(const glm::GlmString& hierarchy, SdfPath& parentPath, GlmMap< GlmString, SdfPath>& existingPaths);
-            void _ComputeSkelEntity(const SkelEntityData* entityData, double time) const;
-            void _ComputeSkinMeshEntity(const SkinMeshEntityData* entityData, double time) const;
-            void _ComputeEntity(EntityVolatileData* entityData, const GolaemCharacter* character, double time) const;
-            void _InvalidateEntity(EntityVolatileData* entityData) const;
+            SdfPath _CreateHierarchyFor(const glm::GlmString& hierarchy, const SdfPath& parentPath, GlmMap<GlmString, SdfPath>& existingPaths);
+            void _ComputeSkelEntity(SkelEntityData* entityData, double frame);
+            void _ComputeSkinMeshEntity(SkinMeshEntityData* entityData, double frame);
+            void _DoComputeSkinMeshEntity(SkinMeshEntityData* entityData);
+            void _ComputeEntity(EntityData* entityData);
+            void _InvalidateEntity(EntityData* entityData);
+            void _ComputeBboxData(SkinMeshEntityData* entityData);
+            void _ComputeSkinMeshTemplateData(
+                glm::Array<std::map<std::pair<int, int>, SkinMeshTemplateData>>& characterTemplateData,
+                const glm::crowdio::InputEntityGeoData& inputGeoData,
+                const glm::crowdio::OutputEntityGeoData& outputData);
+            void _InitSkinMeshData(
+                const SdfPath& parentPath,
+                SkinMeshEntityData* entityData,
+                SkinMeshLodData* lodData,
+                glm::PODArray<SkinMeshData*>& meshDataArray,
+                const std::map<std::pair<int, int>, SkinMeshTemplateData>& templateDataPerMesh,
+                const glm::PODArray<int>& gchaMeshIds,
+                const glm::PODArray<int>& meshAssetMaterialIndices);
         };
+
+        //-----------------------------------------------------------------------------
+        inline const Time& GolaemUSD_DataImpl::UsdWrapper::getCurrentFrame() const
+        {
+            return _currentFrame;
+        }
     } // namespace usdplugin
 } // namespace glm
