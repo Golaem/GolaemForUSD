@@ -93,7 +93,9 @@ if(GOLAEMUSD_STANDALONE_BUILD)
     target_include_directories(${PROJECT_NAME} PRIVATE ${FBXSDK_INCDIR})
     target_include_directories(${PROJECT_NAME} PRIVATE ${GOLAEMDEVKIT_INCDIR} )
     target_include_directories(${PROJECT_NAME} PRIVATE ${PXR_INCLUDE_DIRS})
-    set_target_properties( ${PROJECT_NAME} PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD_DEBUG ON )
+    if(MSVC)
+        set_target_properties( ${PROJECT_NAME} PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD_DEBUG ON )
+    endif()
     target_link_libraries( ${PROJECT_NAME} ${PYTHON_LIBS})
     target_link_libraries( ${PROJECT_NAME} ${FBXSDK_LIBS})
     target_link_libraries(${PROJECT_NAME} ${GOLAEMDEVKIT_LIBS} )
@@ -151,7 +153,14 @@ else()
     # Create a library
     add_library( ${PROJECT_NAME} SHARED ${LIST_FILES} )
 
-    set_target_properties( ${PROJECT_NAME} PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD_DEBUG ON )
+    if(MSVC)
+        if(DEFINED GLM_EXCLUDE_INVALID_DEBUG_BUILDS) # used by build servers
+            set_target_properties( ${PROJECT_NAME} PROPERTIES EXCLUDE_FROM_ALL TRUE )
+            set( GLM_EXCLUDED_TARGETS_FILE_PATH "${CMAKE_BINARY_DIR}/glmExcludedDebugTargets.txt" )
+            file(APPEND "${GLM_EXCLUDED_TARGETS_FILE_PATH}" "${PROJECT_NAME}\n")
+        endif()
+        set_target_properties( ${PROJECT_NAME} PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD_DEBUG ON )
+    endif()
 
     if(BUILD_USD_HOUDINI)
         # from Houdini toolkit/samples/USD/CMakeLists.txt
