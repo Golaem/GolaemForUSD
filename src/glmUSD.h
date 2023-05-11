@@ -32,7 +32,7 @@ namespace glm
     namespace usdplugin
     {
         /// initialize the Golaem USD library
-        extern void init();
+        extern int init();
 
         /// finish the Golaem USD library
         extern void finish();

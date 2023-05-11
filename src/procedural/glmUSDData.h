@@ -13,6 +13,7 @@ USD_INCLUDES_START
 #include <pxr/usd/sdf/abstractData.h>
 #include <pxr/base/tf/staticTokens.h>
 #include <pxr/usd/sdf/fileFormat.h>
+#include <pxr/usd/usd/notice.h>
 USD_INCLUDES_END
 
 namespace glm
@@ -47,7 +48,10 @@ namespace glm
     xx(TfToken, glmDirmap, "")                      \
     xx(TfToken, glmMaterialPath, "/Root/Materials") \
     xx(short, glmMaterialAssignMode, 0)             \
-    xx(TfToken, glmAttributeNamespace, "")
+    xx(TfToken, glmAttributeNamespace, "")          \
+    xx(short, glmLodMode, 0)                        \
+    xx(GfVec3f, glmCameraPos, 0)                    \
+    xx(TfToken, glmProceduralFile, "")
         // clang-format on
 
         // A token of the same name must be defined for each parameter in the macro
@@ -71,7 +75,10 @@ namespace glm
     (glmDirmap)                         \
     (glmMaterialPath)                   \
     (glmMaterialAssignMode)             \
-    (glmAttributeNamespace)
+    (glmAttributeNamespace)             \
+    (glmLodMode)                        \
+    (glmCameraPos)                      \
+    (glmProceduralFile)
         // clang-format on
 
 #ifdef _MSC_VER
@@ -161,6 +168,9 @@ namespace glm
         protected:
             // SdfAbstractData overrides
             void _VisitSpecs(SdfAbstractDataSpecVisitor* visitor) const override;
+
+            void _HandleNotice(const UsdNotice::ObjectsChanged& notice);
+            void _HandleStageNotice(const UsdNotice::StageNotice& notice);
 
         private:
             // Private constructor for factory New

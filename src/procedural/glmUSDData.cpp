@@ -44,6 +44,22 @@ namespace glm
             *param = TfToken(arg);
         }
 
+        // Specialization for GfVec3f which doesn't have an istream method for
+        // TfUnstringify.
+        //-----------------------------------------------------------------------------
+        template <>
+        void _SetParamFromArg<GfVec3f>(GfVec3f* param, const std::string& arg)
+        {
+            GlmString glmArg = arg;
+            glmArg.trim();
+            glmArg.trim("()");
+            glmArg.replaceAll(',', ' ');
+            std::istringstream stream(glmArg.c_str());
+            stream >> param->data()[0];
+            stream >> param->data()[1];
+            stream >> param->data()[2];
+        }
+
         // Helper for setting a parameter value from a VtValue, casting if the value type
         // is not an exact match.
         //-----------------------------------------------------------------------------
@@ -123,6 +139,9 @@ namespace glm
         GolaemUSD_Data::GolaemUSD_Data(const GolaemUSD_DataParams& params)
             : _impl(new GolaemUSD_DataImpl(params))
         {
+            TfWeakPtr<GolaemUSD_Data> me(this);
+            TfNotice::Register(me, &GolaemUSD_Data::_HandleNotice);
+            TfNotice::Register(me, &GolaemUSD_Data::_HandleStageNotice);
         }
 
         //-----------------------------------------------------------------------------
@@ -318,6 +337,18 @@ namespace glm
             GLM_UNREFERENCED(path);
             GLM_UNREFERENCED(time);
             TF_RUNTIME_ERROR("GolaemUSD_Data::EraseTimeSample() not supported");
+        }
+
+        //-----------------------------------------------------------------------------
+        void GolaemUSD_Data::_HandleNotice(const UsdNotice::ObjectsChanged& notice)
+        {
+            _impl->HandleNotice(notice);
+        }
+
+        //-----------------------------------------------------------------------------
+        void GolaemUSD_Data::_HandleStageNotice(const UsdNotice::StageNotice& notice)
+        {
+            _impl->RefreshUsdStage(notice.GetStage());
         }
 
     } // namespace usdplugin
