@@ -1242,22 +1242,75 @@ namespace glm
         }
 
         //-----------------------------------------------------------------------------
-        bool GolaemUSD_DataImpl::QueryTimeSample(const SdfPath& path, double frame, VtValue* value)
+        bool GolaemUSD_DataImpl::_QueryEntityAttributes(const EntityData* genericEntityData, const TfToken& nameToken, const double& frame, VtValue* value)
         {
-            { // update lock scope
-                glm::ScopedLock<glm::Mutex> updateLock(_updateLock);
-                if (_updateCounter == 0)
+            if (const size_t* ppAttrIdx = TfMapLookupPtr(genericEntityData->ppAttrIndexes, nameToken))
+            {
+                if (value)
                 {
-                    const double& usdWrapperCurrentFrame = _usdWrapper.getCurrentFrame();
-                    if (glm::approxDiff(usdWrapperCurrentFrame, frame, static_cast<double>(GLM_NUMERICAL_PRECISION)))
+                    if (*ppAttrIdx < genericEntityData->floatPPAttrValues.size())
                     {
-                        _usdWrapper.update(frame);
-
-                        _updateCounter = _entityCount;
+                        // this is a float PP attribute
+                        size_t floatAttrIdx = *ppAttrIdx;
+                        *value = VtValue(genericEntityData->floatPPAttrValues[floatAttrIdx]);
+                    }
+                    else
+                    {
+                        // this is a vector PP attribute
+                        size_t vectAttrIdx = *ppAttrIdx - genericEntityData->floatPPAttrValues.size();
+                        *value = VtValue(genericEntityData->vectorPPAttrValues[vectAttrIdx]);
                     }
                 }
+                return true;
             }
+            if (const size_t* shaderAttrIdx = TfMapLookupPtr(genericEntityData->shaderAttrIndexes, nameToken))
+            {
+                if (value)
+                {
+                    const glm::ShaderAttribute& shaderAttr = genericEntityData->inputGeoData._character->_shaderAttributes[*shaderAttrIdx];
+                    const glm::ShaderAssetDataContainer* shaderDataContainer = NULL;
+                    {
+                        glm::ScopedLock<glm::Mutex> cachedSimuLock(*genericEntityData->cachedSimulationLock);
+                        shaderDataContainer = genericEntityData->cachedSimulation->getFinalShaderData(frame, UINT32_MAX, true);
+                    }
+                    if (shaderDataContainer != NULL)
+                    {
+                        size_t specificAttrIdx = shaderDataContainer->globalToSpecificShaderAttrIdxPerChar[genericEntityData->inputGeoData._characterIdx][*shaderAttrIdx];
+                        switch (shaderAttr._type)
+                        {
+                        case glm::ShaderAttributeType::INT:
+                        {
+                            *value = VtValue(genericEntityData->intShaderAttrValues[specificAttrIdx]);
+                        }
+                        break;
+                        case glm::ShaderAttributeType::FLOAT:
+                        {
+                            *value = VtValue(genericEntityData->floatShaderAttrValues[specificAttrIdx]);
+                        }
+                        break;
+                        case glm::ShaderAttributeType::STRING:
+                        {
+                            *value = VtValue(genericEntityData->stringShaderAttrValues[specificAttrIdx]);
+                        }
+                        break;
+                        case glm::ShaderAttributeType::VECTOR:
+                        {
+                            *value = VtValue(genericEntityData->vectorShaderAttrValues[specificAttrIdx]);
+                        }
+                        break;
+                        default:
+                            break;
+                        }
+                    }
+                }
+                return true;
+            }
+            return false;
+        }
 
+        //-----------------------------------------------------------------------------
+        bool GolaemUSD_DataImpl::QueryTimeSample(const SdfPath& path, double frame, VtValue* value)
+        {
             SdfPath primPath = path.GetAbsoluteRootOrPrimPath();
             const TfToken& nameToken = path.GetNameToken();
 
@@ -1281,6 +1334,12 @@ namespace glm
                     return false;
                 }
 
+                // need to lock the wrapper until all the data is retrieved
+                glm::ScopedLockActivable<glm::Mutex> wrapperLock(_usdWrapper._updateLock);
+                _usdWrapper.update(frame, wrapperLock);
+
+                // need to lock the entity until all the data is retrieved
+                glm::ScopedLock<glm::Mutex> entityComputeLock(*entityData->entityComputeLock);
                 _ComputeSkelEntity(entityData, frame);
                 genericEntityData = entityData;
 
@@ -1291,6 +1350,7 @@ namespace glm
                     {
                         RETURN_TRUE_WITH_OPTIONAL_VALUE(entityData->enabled ? UsdGeomTokens->inherited : UsdGeomTokens->invisible);
                     }
+                    return _QueryEntityAttributes(genericEntityData, nameToken, frame, value);
                 }
                 else
                 {
@@ -1353,6 +1413,12 @@ namespace glm
                     return false;
                 }
 
+                // need to lock the wrapper until all the data is retrieved
+                glm::ScopedLockActivable<glm::Mutex> wrapperLock(_usdWrapper._updateLock);
+                _usdWrapper.update(frame, wrapperLock);
+
+                // need to lock the entity until all the data is retrieved
+                glm::ScopedLock<glm::Mutex> entityComputeLock(*entityData->entityComputeLock);
                 _ComputeSkinMeshEntity(entityData, frame);
                 genericEntityData = entityData;
 
@@ -1368,6 +1434,7 @@ namespace glm
                     {
                         RETURN_TRUE_WITH_OPTIONAL_VALUE(entityData->enabled ? UsdGeomTokens->inherited : UsdGeomTokens->invisible);
                     }
+                    return _QueryEntityAttributes(genericEntityData, nameToken, frame, value);
                 }
                 else if (isMeshPath)
                 {
@@ -1387,71 +1454,6 @@ namespace glm
                     {
                         RETURN_TRUE_WITH_OPTIONAL_VALUE(_params.glmLodMode == 1 || meshLodData->enabled ? UsdGeomTokens->inherited : UsdGeomTokens->invisible);
                     }
-                }
-            }
-
-            if (isEntityPath)
-            {
-                if (const size_t* ppAttrIdx = TfMapLookupPtr(genericEntityData->ppAttrIndexes, nameToken))
-                {
-                    if (value)
-                    {
-                        if (*ppAttrIdx < genericEntityData->floatPPAttrValues.size())
-                        {
-                            // this is a float PP attribute
-                            size_t floatAttrIdx = *ppAttrIdx;
-                            *value = VtValue(genericEntityData->floatPPAttrValues[floatAttrIdx]);
-                        }
-                        else
-                        {
-                            // this is a vector PP attribute
-                            size_t vectAttrIdx = *ppAttrIdx - genericEntityData->floatPPAttrValues.size();
-                            *value = VtValue(genericEntityData->vectorPPAttrValues[vectAttrIdx]);
-                        }
-                    }
-                    return true;
-                }
-                if (const size_t* shaderAttrIdx = TfMapLookupPtr(genericEntityData->shaderAttrIndexes, nameToken))
-                {
-                    if (value)
-                    {
-                        const glm::ShaderAttribute& shaderAttr = genericEntityData->inputGeoData._character->_shaderAttributes[*shaderAttrIdx];
-                        const glm::ShaderAssetDataContainer* shaderDataContainer = NULL;
-                        {
-                            glm::ScopedLock<glm::Mutex> cachedSimuLock(*genericEntityData->cachedSimulationLock);
-                            shaderDataContainer = genericEntityData->cachedSimulation->getFinalShaderData(frame, UINT32_MAX, true);
-                        }
-                        if (shaderDataContainer != NULL)
-                        {
-                            size_t specificAttrIdx = shaderDataContainer->globalToSpecificShaderAttrIdxPerChar[genericEntityData->inputGeoData._characterIdx][*shaderAttrIdx];
-                            switch (shaderAttr._type)
-                            {
-                            case glm::ShaderAttributeType::INT:
-                            {
-                                *value = VtValue(genericEntityData->intShaderAttrValues[specificAttrIdx]);
-                            }
-                            break;
-                            case glm::ShaderAttributeType::FLOAT:
-                            {
-                                *value = VtValue(genericEntityData->floatShaderAttrValues[specificAttrIdx]);
-                            }
-                            break;
-                            case glm::ShaderAttributeType::STRING:
-                            {
-                                *value = VtValue(genericEntityData->stringShaderAttrValues[specificAttrIdx]);
-                            }
-                            break;
-                            case glm::ShaderAttributeType::VECTOR:
-                            {
-                                *value = VtValue(genericEntityData->vectorShaderAttrValues[specificAttrIdx]);
-                            }
-                            break;
-                            default:
-                                break;
-                            }
-                        }
-                    }
-                    return true;
                 }
             }
 
@@ -1488,9 +1490,6 @@ namespace glm
 
             _startFrame = INT_MAX;
             _endFrame = INT_MIN;
-
-            _entityCount = 0;
-            _updateCounter = 0;
 
             glm::GlmString correctedFilePath;
             glm::Array<glm::GlmString> dirmapRules = glm::stringToStringArray(_params.glmDirmap.GetText(), ";");
@@ -1908,8 +1907,6 @@ namespace glm
                         entityData->excluded = true;
                         continue;
                     }
-
-                    ++_entityCount;
 
                     entityData->intShaderAttrValues.resize(shaderDataContainer->specificShaderAttrCountersPerChar[characterIdx][glm::ShaderAttributeType::INT], 0);
                     entityData->floatShaderAttrValues.resize(shaderDataContainer->specificShaderAttrCountersPerChar[characterIdx][glm::ShaderAttributeType::FLOAT], 0);
@@ -2795,18 +2792,9 @@ namespace glm
         //-----------------------------------------------------------------------------
         void GolaemUSD_DataImpl::_ComputeSkelEntity(SkelEntityData* entityData, double frame)
         {
-            glm::ScopedLock<glm::Mutex> entityComputeLock(*entityData->entityComputeLock);
             if (glm::approxDiff(entityData->computedTimeSample, frame, static_cast<double>(GLM_NUMERICAL_PRECISION)))
             {
                 ZoneScopedNC("ComputeSkelEntity", GLM_COLOR_CACHE);
-                {
-                    glm::ScopedLock<glm::Mutex> updateLock(_updateLock);
-                    if (_updateCounter == 0)
-                    {
-                        return;
-                    }
-                    --_updateCounter;
-                }
                 entityData->computedTimeSample = frame;
 
                 _ComputeEntity(entityData);
@@ -3011,18 +2999,9 @@ namespace glm
         void GolaemUSD_DataImpl::_ComputeSkinMeshEntity(SkinMeshEntityData* entityData, double frame)
         {
             // check if computation is needed
-            glm::ScopedLock<glm::Mutex> entityComputeLock(*entityData->entityComputeLock);
             if (glm::approxDiff(entityData->computedTimeSample, frame, static_cast<double>(GLM_NUMERICAL_PRECISION)))
             {
                 ZoneScopedNC("ComputeSkinMeshEntity", GLM_COLOR_CACHE);
-                {
-                    glm::ScopedLock<glm::Mutex> updateLock(_updateLock);
-                    if (_updateCounter == 0)
-                    {
-                        return;
-                    }
-                    --_updateCounter;
-                }
 
                 entityData->computedTimeSample = frame;
                 _DoComputeSkinMeshEntity(entityData);
@@ -3063,7 +3042,6 @@ namespace glm
                     else if (_params.glmLodMode == 2)
                     {
                         // in dynamic lod mode get the camera pos from the node attributes (it may be connected to another attribute - usdWrapper will do the update)
-                        glm::ScopedLock<glm::Mutex> updateLock(_updateLock); // avoid retrieving a value during usdWrapper update
                         const VtValue* cameraPosValue = TfMapLookupPtr(_usdParams, _golaemTokens->glmCameraPos);
                         if (cameraPosValue != NULL)
                         {
@@ -3865,39 +3843,46 @@ namespace glm
         }
 
         //-----------------------------------------------------------------------------
-        void GolaemUSD_DataImpl::UsdWrapper::update(const double& currentFrame)
+        void GolaemUSD_DataImpl::UsdWrapper::update(const double& frame, glm::ScopedLockActivable<glm::Mutex>& scopedLock)
         {
-            _currentFrame = currentFrame;
-            if (_usdStage == NULL)
+            scopedLock.lock();
+            if (glm::approxDiff(_currentFrame, frame, static_cast<double>(GLM_NUMERICAL_PRECISION)))
             {
-                return;
-            }
-
-            // update connected usd params
-            for (std::pair<VtValue*, SdfPath>& connectedParam : _connectedUsdParams)
-            {
-                if (connectedParam.second.IsPropertyPath())
+                _currentFrame = frame;
+                if (_usdStage != NULL)
                 {
-                    SdfPath primPath = connectedParam.second.GetAbsoluteRootOrPrimPath();
-                    if (UsdPrim prim = _usdStage->GetPrimAtPath(primPath))
+                    // update connected usd params
+                    for (std::pair<VtValue*, SdfPath>& connectedParam : _connectedUsdParams)
                     {
-                        const TfToken& nameToken = connectedParam.second.GetNameToken();
-                        if (UsdAttribute usdAttribute = prim.GetAttribute(nameToken))
+                        if (connectedParam.second.IsPropertyPath())
                         {
-                            VtValue attrValue;
-                            usdAttribute.Get(&attrValue, UsdTimeCode(currentFrame));
-                            const std::type_info& currentTypeInfo = connectedParam.first->GetTypeid();
-                            if (attrValue.GetTypeid() == currentTypeInfo)
+                            SdfPath primPath = connectedParam.second.GetAbsoluteRootOrPrimPath();
+                            if (UsdPrim prim = _usdStage->GetPrimAtPath(primPath))
                             {
-                                *connectedParam.first = attrValue;
-                            }
-                            else if (attrValue.CanCastToTypeid(currentTypeInfo))
-                            {
-                                *connectedParam.first = VtValue::CastToTypeid(attrValue, currentTypeInfo);
+                                const TfToken& nameToken = connectedParam.second.GetNameToken();
+                                if (UsdAttribute usdAttribute = prim.GetAttribute(nameToken))
+                                {
+                                    VtValue attrValue;
+                                    usdAttribute.Get(&attrValue, UsdTimeCode(_currentFrame));
+                                    const std::type_info& currentTypeInfo = connectedParam.first->GetTypeid();
+                                    if (attrValue.GetTypeid() == currentTypeInfo)
+                                    {
+                                        *connectedParam.first = attrValue;
+                                    }
+                                    else if (attrValue.CanCastToTypeid(currentTypeInfo))
+                                    {
+                                        *connectedParam.first = VtValue::CastToTypeid(attrValue, currentTypeInfo);
+                                    }
+                                }
                             }
                         }
                     }
                 }
+            }
+            if (_usdStage == NULL || _connectedUsdParams.empty())
+            {
+                // nothing to update, no need to keep the lock
+                scopedLock.unlock();
             }
         }
 
