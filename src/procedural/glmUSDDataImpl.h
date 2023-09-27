@@ -145,13 +145,14 @@ namespace glm
             public:
                 glm::Array<std::pair<VtValue*, SdfPath>> _connectedUsdParams;
                 UsdStagePtr _usdStage = NULL; // from GolaemUSD_DataImpl
+                glm::Mutex _updateLock;
 
             protected:
                 double _currentFrame = -FLT_MAX;
 
             public:
                 inline const double& getCurrentFrame() const;
-                void update(const double& currentFrame);
+                void update(const double& frame, glm::ScopedLockActivable<glm::Mutex>& scopedLock);
             };
 
         private:
@@ -198,10 +199,6 @@ namespace glm
             glm::PODArray<glm::Mutex*> _cachedSimulationLocks;
 
             UsdWrapper _usdWrapper;
-            glm::Mutex _updateLock;
-
-            size_t _entityCount = 0;
-            size_t _updateCounter = 0;
 
             std::map<TfToken, VtValue, TfTokenFastArbitraryLessThan> _usdParams; // additional usd params and their value
 
@@ -293,6 +290,8 @@ namespace glm
                 const std::map<std::pair<int, int>, SkinMeshTemplateData>& templateDataPerMesh,
                 const glm::PODArray<int>& gchaMeshIds,
                 const glm::PODArray<int>& meshAssetMaterialIndices);
+
+            bool _QueryEntityAttributes(const EntityData* genericEntityData, const TfToken& nameToken, const double& frame, VtValue* value);
         };
 
         //-----------------------------------------------------------------------------
