@@ -386,6 +386,11 @@ namespace glm
         GolaemUSD_DataImpl::~GolaemUSD_DataImpl()
         {
             delete _factory;
+            for (glm::Mutex* lock : _cachedSimulationLocks)
+            {
+                delete lock;
+            }
+            _cachedSimulationLocks.clear();
             usdplugin::finish();
         }
 
