@@ -1993,6 +1993,7 @@ namespace glm
                         {
                             // compute mesh names
                             glm::PODArray<int> furAssetIds;
+							glm::PODArray<int> dummyDeepAssets;
                             glm::PODArray<size_t> meshAssetNameIndices;
                             glm::PODArray<int> meshAssetMaterialIndices;
                             glm::Array<glm::GlmString> meshAliases;
@@ -2000,6 +2001,7 @@ namespace glm
                                 skelEntityData->inputGeoData._character,
                                 skelEntityData->inputGeoData._entityId,
                                 *skelEntityData->inputGeoData._assets,
+								dummyDeepAssets,
                                 entityMeshNames,
                                 meshAliases,
                                 furAssetIds,
@@ -2092,12 +2094,14 @@ namespace glm
                         {
                             // compute mesh names
                             glm::PODArray<int> furAssetIds;
+							glm::PODArray<int> dummyDeepAssets;
                             glm::PODArray<size_t> meshAssetNameIndices;
                             glm::Array<glm::GlmString> meshAliases;
                             glm::crowdio::computeMeshNames(
                                 skinMeshEntityData->inputGeoData._character,
                                 skinMeshEntityData->inputGeoData._entityId,
                                 *skinMeshEntityData->inputGeoData._assets,
+								dummyDeepAssets,
                                 entityMeshNames,
                                 meshAliases,
                                 furAssetIds,
