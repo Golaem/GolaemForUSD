@@ -66,7 +66,7 @@ if(GOLAEMUSD_STANDALONE_BUILD)
 
     set( CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cfg/cmake")
     
-    find_package(PythonLibs REQUIRED)
+    find_package(Python REQUIRED)
     find_package(FbxSdk REQUIRED)
     find_package(USD REQUIRED)
    
