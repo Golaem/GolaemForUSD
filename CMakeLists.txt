@@ -240,6 +240,7 @@ else()
         target_compile_options(${PROJECT_NAME} PRIVATE "-Wno-deprecated")
     endif()
 
+    set_target_rpath( ${PROJECT_NAME} "$ORIGIN/../lib:$ORIGIN/../../lib:$ORIGIN/../../../lib" )
     set_target_prefix( ${PROJECT_NAME} PLUGIN )
     set_target_postfix( ${PROJECT_NAME} PLUGIN )
 
