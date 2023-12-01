@@ -184,7 +184,7 @@ else()
                 ${_houdini_hfs_root}/custom/houdini/dsolib/libpxr_usdUtils.lib
                 ${_houdini_hfs_root}/custom/houdini/dsolib/libpxr_vt.lib
                 ${_houdini_hfs_root}/custom/houdini/dsolib/libpxr_work.lib
-                ${PYTHON_LIBRARY}
+                Python::Module
             )
 
             set(_houdini_link_libraries_
