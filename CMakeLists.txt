@@ -66,7 +66,7 @@ if(GOLAEMUSD_STANDALONE_BUILD)
 
     set( CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cfg/cmake")
     
-    find_package(PythonLibs REQUIRED)
+    find_package(Python REQUIRED)
     find_package(FbxSdk REQUIRED)
     find_package(USD REQUIRED)
    
@@ -184,7 +184,7 @@ else()
                 ${_houdini_hfs_root}/custom/houdini/dsolib/libpxr_usdUtils.lib
                 ${_houdini_hfs_root}/custom/houdini/dsolib/libpxr_vt.lib
                 ${_houdini_hfs_root}/custom/houdini/dsolib/libpxr_work.lib
-                ${PYTHON_LIBRARY}
+                Python::Module
             )
 
             set(_houdini_link_libraries_
@@ -240,6 +240,7 @@ else()
         target_compile_options(${PROJECT_NAME} PRIVATE "-Wno-deprecated")
     endif()
 
+    set_target_rpath( ${PROJECT_NAME} "$ORIGIN/../lib:$ORIGIN/../../lib:$ORIGIN/../../../lib" )
     set_target_prefix( ${PROJECT_NAME} PLUGIN )
     set_target_postfix( ${PROJECT_NAME} PLUGIN )
 
