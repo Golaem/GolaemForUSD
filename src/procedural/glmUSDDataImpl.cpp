@@ -1640,6 +1640,19 @@ namespace glm
             findDirmappedFile(correctedFilePath, cacheDir, dirmapRules);
             cacheDir = correctedFilePath;
 
+            // force creating the simulation data (might change golaem characters if there is a CreateEntity node)
+            for (size_t iCf = 0, cfCount = crowdFieldNames.size(); iCf < cfCount; ++iCf)
+            {
+                const glm::GlmString& glmCfName = crowdFieldNames[iCf];
+                if (glmCfName.empty())
+                {
+                    continue;
+                }
+
+                glm::crowdio::CachedSimulation& cachedSimulation = _factory->getCachedSimulation(cacheDir.c_str(), cacheName.c_str(), glmCfName.c_str());
+                cachedSimulation.getFinalSimulationData();
+            }
+
             // Layer always has a root spec that is the default prim of the layer.
             _primSpecPaths.insert(_GetRootPrimPath());
             std::vector<TfToken>& rootChildNames = _primChildNames[_GetRootPrimPath()];
