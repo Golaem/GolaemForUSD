@@ -1285,7 +1285,12 @@ namespace glm
                         {
                         case glm::ShaderAttributeType::INT:
                         {
-                            *value = VtValue(genericEntityData->intShaderAttrValues[specificAttrIdx]);
+							glm::GlmString attrName, subAttrName;
+							glm::crowdio::RendererAttributeType::Value overrideType(glm::crowdio::RendererAttributeType::END);
+							glm::crowdio::parseRendererAttribute("arnold", shaderAttr._name, attrName, subAttrName, overrideType);
+							if(overrideType == glm::crowdio::RendererAttributeType::BOOL)
+								*value = VtValue(genericEntityData->intShaderAttrValues[specificAttrIdx] != 0);
+							else *value = VtValue(genericEntityData->intShaderAttrValues[specificAttrIdx]);
                         }
                         break;
                         case glm::ShaderAttributeType::FLOAT:
@@ -1955,13 +1960,17 @@ namespace glm
                     }
 
                     // add shader attributes
+                    glm::GlmString attrName, subAttrName;
+                    glm::crowdio::RendererAttributeType::Value overrideType(glm::crowdio::RendererAttributeType::END);
                     for (size_t iShAttr = 0, shAttrCount = character->_shaderAttributes.size(); iShAttr < shAttrCount; ++iShAttr)
                     {
                         const glm::ShaderAttribute& shAttr = character->_shaderAttributes[iShAttr];
-                        GlmString attrName = TfMakeValidIdentifier(shAttr._name.c_str());
+                        attrName = shAttr._name.c_str();
                         if (!attributeNamespace.empty())
                         {
-                            attrName = attributeNamespace + ":" + attrName;
+                            if (glm::crowdio::parseRendererAttribute("arnold", shAttr._name, attrName, subAttrName, overrideType))
+                                attrName = attributeNamespace + ":arnold:" + PXR_NS::TfMakeValidIdentifier(attrName.c_str());
+                            else attrName = attributeNamespace + ":" + PXR_NS::TfMakeValidIdentifier(attrName.c_str());
                         }
                         TfToken attrNameToken(attrName.c_str());
                         entityData->shaderAttrIndexes[attrNameToken] = iShAttr;
