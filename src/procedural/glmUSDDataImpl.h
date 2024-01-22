@@ -173,6 +173,7 @@ namespace glm
 
             int _startFrame;
             int _endFrame;
+            float _fps = 24;
 
             // Cached set of generated time sample times. All of the animated property
             // time sample fields have the same time sample times.
