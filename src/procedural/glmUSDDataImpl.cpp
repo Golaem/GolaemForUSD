@@ -573,6 +573,10 @@ namespace glm
                 {
                     RETURN_TRUE_WITH_OPTIONAL_VALUE(double(_endFrame));
                 }
+                if (field == SdfFieldKeys->FramesPerSecond || field == SdfFieldKeys->TimeCodesPerSecond)
+                {
+                    RETURN_TRUE_WITH_OPTIONAL_VALUE(double(_fps));
+                }
             }
             else
             {
@@ -1080,7 +1084,9 @@ namespace glm
                     {SdfChildrenKeys->PrimChildren,
                      SdfFieldKeys->DefaultPrim,
                      SdfFieldKeys->StartTimeCode,
-                     SdfFieldKeys->EndTimeCode});
+                     SdfFieldKeys->EndTimeCode,
+                     SdfFieldKeys->FramesPerSecond,
+                     SdfFieldKeys->TimeCodesPerSecond});
                 return pseudoRootFields;
             }
             else if (path == _GetRootPrimPath())
@@ -1505,6 +1511,7 @@ namespace glm
 
             _startFrame = INT_MAX;
             _endFrame = INT_MIN;
+            _fps = -1;
 
             glm::GlmString correctedFilePath;
             glm::Array<glm::GlmString> dirmapRules = glm::stringToStringArray(_params.glmDirmap.GetText(), ";");
@@ -1853,6 +1860,16 @@ namespace glm
                 if (simuData == NULL)
                 {
                     continue;
+                }
+
+                if (_fps < 0)
+                {
+                    _fps = simuData->_framerate;
+                }
+
+                if (glm::approxDiff(_fps, simuData->_framerate, GLM_NUMERICAL_PRECISION))
+                {
+                    GLM_CROWD_TRACE_WARNING("Found inconsistent frame rates between '" << crowdFieldNames[0] << "' and '" << glmCfName << "'. This might lead to inconsistent renders.");
                 }
 
                 // compute assets if needed
