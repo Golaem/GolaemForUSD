@@ -28,7 +28,11 @@ USD_INCLUDES_END
 #include <glmCrowdFBXCharacter.h>
 #include <glmCrowdGcgCharacter.h>
 #include <glmCrowdIOUtils.h>
+
+#ifdef TRACY_ENABLE
 #include <glmTracy.h>
+#endif
+
 #include <glmDistance.h>
 
 #include <fstream>
@@ -1507,7 +1511,9 @@ namespace glm
         //-----------------------------------------------------------------------------
         void GolaemUSD_DataImpl::_InitFromParams()
         {
+#ifdef TRACY_ENABLE
             ZoneScopedNC("InitFromParams", GLM_COLOR_CACHE);
+#endif
 
             _startFrame = INT_MAX;
             _endFrame = INT_MIN;
@@ -2852,7 +2858,9 @@ namespace glm
         {
             if (glm::approxDiff(entityData->computedTimeSample, frame, static_cast<double>(GLM_NUMERICAL_PRECISION)))
             {
+#ifdef TRACY_ENABLE
                 ZoneScopedNC("ComputeSkelEntity", GLM_COLOR_CACHE);
+#endif
                 entityData->computedTimeSample = frame;
 
                 _ComputeEntity(entityData);
@@ -3059,7 +3067,9 @@ namespace glm
             // check if computation is needed
             if (glm::approxDiff(entityData->computedTimeSample, frame, static_cast<double>(GLM_NUMERICAL_PRECISION)))
             {
+#ifdef TRACY_ENABLE
                 ZoneScopedNC("ComputeSkinMeshEntity", GLM_COLOR_CACHE);
+#endif
 
                 entityData->computedTimeSample = frame;
                 _DoComputeSkinMeshEntity(entityData);
